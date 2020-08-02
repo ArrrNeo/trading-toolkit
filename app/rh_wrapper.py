@@ -168,16 +168,17 @@ class RhWrapper():
         r.login(username=user_id, password=passwd)
 
         current_dir = os.path.dirname(os.path.realpath(__file__))
-        robinhood_stock_split_events.objects.all().delete()
         stock_splits_csv = csv.reader(open(current_dir + '/stock_splits.csv', 'r'))
         for row in stock_splits_csv:
-            print (row)
-            obj = robinhood_stock_split_events()
-            obj.symbol = row[0]
-            obj.date = datetime.datetime.strptime(row[1], "%Y-%m-%d").date()
-            obj.ratio = float(row[2])
-            obj.new_symbol = row[3]
-            obj.save()
+            obj = robinhood_stock_split_events.objects.filter(symbol=row[0])
+            if not obj:
+                print ('adding new ticker to split table ' + str(row))
+                obj = robinhood_stock_split_events()
+                obj.symbol = row[0]
+                obj.date = datetime.datetime.strptime(row[1], "%Y-%m-%d").date()
+                obj.ratio = float(row[2])
+                obj.new_symbol = row[3]
+                obj.save()
 
         if DbAccess.is_update_needed():
             obj = portfolio_summary.objects.all()
