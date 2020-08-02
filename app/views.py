@@ -38,8 +38,6 @@ def pages(request):
         return HttpResponse(html_template.render(context, request))
 
 def summary(request):
-    data = []
-    labels = []
     total_equity = 0
     stocks_equity = 0
     portfolio_cash = 0
@@ -50,6 +48,13 @@ def summary(request):
     total_stocks_unrealized_pl = 0
     today_options_unrealized_pl = 0
     total_options_unrealized_pl = 0
+
+    stocks_data = []
+    stocks_labels = []
+    options_data = []
+    options_labels = []
+    portfolio_data = []
+    portfolio_labels = []
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
     username = open(current_dir + '/username.txt', 'r').read()
@@ -78,23 +83,35 @@ def summary(request):
     DbAccess.set_to_db('options_equity', total_equity)
     DbAccess.calc_portfolio_diversity(total_equity)
 
-    labels.append('stocks_equity')
-    labels.append('options_equity')
-    labels.append('cash')
+    portfolio_labels.append('stocks_equity')
+    portfolio_labels.append('options_equity')
+    portfolio_labels.append('cash')
     if total_equity:
-        data.append(round((stocks_equity  / total_equity) * 100, 2))
-        data.append(round((options_equity / total_equity) * 100, 2))
-        data.append(round((portfolio_cash / total_equity) * 100, 2))
+        portfolio_data.append(round((stocks_equity  / total_equity) * 100, 2))
+        portfolio_data.append(round((options_equity / total_equity) * 100, 2))
+        portfolio_data.append(round((portfolio_cash / total_equity) * 100, 2))
     else:
-        data.append(0)
-        data.append(0)
-        data.append(0)
+        portfolio_data.append(0)
+        portfolio_data.append(0)
+        portfolio_data.append(0)
+
+    qset = stocks_held.objects.all()
+    for row in qset:
+        stocks_data.append(row.pp_equity)
+        stocks_labels.append(row.symbol)
+    
+    qset = options_held.objects.all()
+    for row in qset:
+        options_data.append(row.pp_equity)
+        options_labels.append(row.symbol + ' ' + str(row.expiration_date) + ' ' + str(row.strike_price) + ' ' + str(row.option_type))
 
     data_for_template = {
-        'labels_1'                     : labels,
-        'data_1'                       : data,
-        'labels_2'                     : labels,
-        'data_2'                       : data,
+        'stocks_labels'                : stocks_labels,
+        'stocks_data'                  : stocks_data,
+        'options_labels'               : options_labels,
+        'options_data'                 : options_data,
+        'portfolio_labels'             : portfolio_labels,
+        'portfolio_data'               : portfolio_data,
         'options_equity'               : options_equity,
         'total_options_unrealized_pl'  : total_options_unrealized_pl,
         'today_options_unrealized_pl'  : today_options_unrealized_pl,

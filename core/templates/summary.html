@@ -6,7 +6,9 @@
 {% block plugin_stylesheets %}{% endblock plugin_stylesheets %}
 
 <!-- Specific CSS goes HERE -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}
+<link rel="stylesheet" type="text/css" href="/static/assets/css/app.css">
+{% endblock stylesheets %}
 
 {% block content %}
 
@@ -117,16 +119,34 @@
       <div class="col-lg-6 grid-margin stretch-card">
         <div class="card">
           <div class="card-body">
-            <h4 class="card-title">Pie chart</h4>
-            <canvas id="pie-chart" style="height:250px"></canvas>
+            <h4 class="card-title">Portfolio Summary Pie chart</h4>
+            <canvas id="piechartportfolio" style="height:250px"></canvas>
           </div>
         </div>
       </div>
       <div class="col-lg-6 grid-margin stretch-card">
         <div class="card">
           <div class="card-body">
-            <h4 class="card-title">Bar chart</h4>
+            <h4 class="card-title">Portfolio Summary Bar chart</h4>
             <canvas id="barChart" style="height:250px"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-lg-6 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <h4 class="card-title">Stocks Held Pie chart</h4>
+            <canvas id="piechartstocks" style="height:250px"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <h4 class="card-title">Options Pie chart</h4>
+            <canvas id="piechartoptions" style="height:250px"></canvas>
           </div>
         </div>
       </div>
@@ -139,45 +159,70 @@
 {% block plugin_javascripts %}
 
 <script src="/static/assets/vendors/chart.js/Chart.min.js"></script>
+<script src="https://d3js.org/d3-color.v1.min.js"></script>
+<script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
 
 {% endblock plugin_javascripts %}
 
 {% block javascripts %}
 
 <script>
-  var config =
-  {
-    type: 'pie',
-    data:
-    {
-      datasets: [{
-                  data: {{ data_1 | safe }},
-                  backgroundColor: ['#111166', '#F9A909', '#F11080', '#00AA00'],
-                  label: '% of portfolio'
-                }],
-      labels: {{ labels_1 | safe }}
-    },
-    options: { responsive: true }
-  };
 
-  var data =
-  {
-    labels: {{ labels_2 | safe }},
-    datasets:
-    [{
-      label: '% of portfolio',
-      data: {{ data_2 | safe }},
-      backgroundColor: [ '#111166', '#F9A909', '#F11080', '#00AA00' ],
-      borderColor: [ '#F1F1F6', '#F9F9F9', '#F1F0F0', '#F0FAF0' ],
+  function calculatePoint(i, intervalSize, colorRangeInfo) {
+    var { colorStart, colorEnd, useEndAsStart } = colorRangeInfo;
+    return (useEndAsStart ? (colorEnd - (i * intervalSize)) : (colorStart + (i * intervalSize)));
+  }
+
+  function interpolateColors(dataLength, colorScale, colorRangeInfo) {
+    var { colorStart, colorEnd } = colorRangeInfo;
+    var colorRange = colorEnd - colorStart;
+    var intervalSize = colorRange / dataLength;
+    var i, colorPoint;
+    var colorArray = [];
+
+    for (i = 0; i < dataLength; i++) {
+      colorPoint = calculatePoint(i, intervalSize, colorRangeInfo);
+      colorArray.push(colorScale(colorPoint));
+    }
+    return colorArray;
+  }
+
+  var portfoliodata = {
+    labels: {{ portfolio_labels | safe }},
+    datasets: [{
+      data: {{ portfolio_data | safe }},
+      backgroundColor: interpolateColors({{ portfolio_data | length }}, d3.interpolateCool, {colorStart: 0, colorEnd: 0.65, useEndAsStart: false}),
+      borderColor: interpolateColors({{ portfolio_data | length }}, d3.interpolateCool, {colorStart: 0, colorEnd: 0, useEndAsStart: false}),
       borderWidth: 1,
       fill: false
     }]
   };
 
-  var options =
-  {
-    scales:
-    {
+  var stocksdata = {
+    labels: {{ stocks_labels | safe }},
+    datasets: [{
+      data: {{ stocks_data | safe }},
+      backgroundColor: interpolateColors({{ stocks_data | length }}, d3.interpolateRainbow, {colorStart: 0, colorEnd: 1, useEndAsStart: false}),
+      borderColor: interpolateColors({{ stocks_data | length }}, d3.interpolateRainbow, {colorStart: 0, colorEnd: 0, useEndAsStart: false}),
+      borderWidth: 1,
+      fill: false
+    }]
+  };
+
+  var optionsdata = {
+    labels: {{ options_labels | safe }},
+    datasets: [{
+      data: {{ options_data | safe }},
+      backgroundColor: interpolateColors({{ options_data | length }}, d3.interpolateRainbow, {colorStart: 0, colorEnd: 1, useEndAsStart: false}),
+      borderColor: interpolateColors({{ options_data | length }}, d3.interpolateRainbow, {colorStart: 0, colorEnd: 0, useEndAsStart: false}),
+      borderWidth: 1,
+      fill: false
+    }]
+  };
+
+  var barchartoptions = {
+    scales: {
       yAxes: [{ ticks: { beginAtZero: true }, gridLines: { color: "rgba(204, 204, 204,0.1)" } }],
       xAxes: [{ gridLines: { color: "rgba(204, 204, 204,0.1)" } }]
     },
@@ -187,11 +232,17 @@
 
   window.onload = function ()
   {
-    var ctx = document.getElementById('pie-chart').getContext('2d');
-    var PieChart = new Chart(ctx, config);
+    var ctx = document.getElementById('piechartportfolio').getContext('2d');
+    new Chart(ctx, { type: 'pie', data: portfoliodata, options: {responsive: true, legend: { display: true }} });
 
+    var ctx = document.getElementById('piechartstocks').getContext('2d');
+    new Chart(ctx, { type: 'pie', data: stocksdata, options: {responsive: true, legend: { display: true }} });
+
+    var ctx = document.getElementById('piechartoptions').getContext('2d');
+    new Chart(ctx, { type: 'pie', data: optionsdata, options: {responsive: true, legend: { display: true }} });
+  
     var ctx = document.getElementById('barChart').getContext('2d');
-    var barChart = new Chart(ctx, { type: 'bar', data: data, options: options });
+    new Chart(ctx, { type: 'bar', data: portfoliodata, options: barchartoptions });
   };
 
 </script>
