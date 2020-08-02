@@ -40,7 +40,7 @@
                 <tbody>
                   {% for row in table %}
                     <tr>
-                      <td> {{ row.chain_symbol }} </td>
+                      <td> {{ row.symbol }} </td>
                       <td> {{ row.option_type }} </td>
                       <td> {{ row.strike_price }} </td>
                       <td> {{ row.expiration_date }} </td>
@@ -48,11 +48,11 @@
                       <td> {{ row.quantity }} </td>
                       <td> {{ row.previous_close_price | floatformat:2 }} </td>
                       <td> {{ row.current_price | floatformat:2 }} </td>
-                      <td> {{ row.equity | floatformat:2 }} </td>
-                      <td> {{ row.cost_basis | floatformat:2 }} </td>
-                      <td> {{ row.unrealized_pl | floatformat:2 }} </td>
-                      <td> {{ row.today_unrealized_pl | floatformat:2 }} </td>
-                      <td> {{ row.portfolio_diversity | floatformat:2 }} </td>
+                      <td> {{ row.pp_equity | floatformat:2 }} </td>
+                      <td> {{ row.pp_cost_basis | floatformat:2 }} </td>
+                      <td> {{ row.pp_unrealized_pl | floatformat:2 }} </td>
+                      <td> {{ row.pp_today_unrealized_pl | floatformat:2 }} </td>
+                      <td> {{ row.pp_portfolio_diversity | floatformat:2 }} </td>
                       <td> <input type="checkbox" name="long_term" value={{ row.option_id }} {% if row.long_term %} checked {% endif %} /> </td>
                     </tr>
                   {% endfor %}

@@ -10,8 +10,9 @@ from django.db.models import Sum
 from django.template import loader
 from django.http import HttpResponse
 from django.http import JsonResponse
-from app.robinhood_profile import RobinhoodWrapper
-from app.models import robinhood_options, robinhood_stocks
+from app.rh_wrapper import RhWrapper
+from app.db_access import DbAccess
+from app.models import options_held, stocks_held
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 
@@ -39,17 +40,14 @@ def pages(request):
 def summary(request):
     data = []
     labels = []
+    total_equity = 0
     stocks_equity = 0
-    options_equity = 0
-    total_equity = 1
     portfolio_cash = 0
-
+    options_equity = 0
     today_stocks_realized_pl = 0
     total_stocks_realized_pl = 0
-
     today_stocks_unrealized_pl = 0
     total_stocks_unrealized_pl = 0
-
     today_options_unrealized_pl = 0
     total_options_unrealized_pl = 0
 
@@ -57,16 +55,28 @@ def summary(request):
     username = open(current_dir + '/username.txt', 'r').read()
     password = open(current_dir + '/password.txt', 'r').read()
 
+    RhWrapper.rh_pull_orders_history(user_id=username, passwd=password)
+    RhWrapper.rh_pull_portfolio_data(user_id=username, passwd=password)
 
-    RobinhoodWrapper.get_orders_history(user_id=username, passwd=password)
-    RobinhoodWrapper.get_profile_data(user_id=username, passwd=password)
-    RobinhoodWrapper.calculate_pl() # this calculates pl on order history
-    stocks_equity,  today_stocks_unrealized_pl,  total_stocks_unrealized_pl  = RobinhoodWrapper.get_my_stock_positions()
-    options_equity, today_options_unrealized_pl, total_options_unrealized_pl = RobinhoodWrapper.get_my_options_positions()
-    today_stocks_realized_pl, total_stocks_realized_pl                       = RobinhoodWrapper.get_realized_pl()
-    portfolio_cash                                                           = RobinhoodWrapper.get_my_portfolio_cash()
-    total_equity                                                             = stocks_equity + options_equity + portfolio_cash
-    RobinhoodWrapper.calculate_portfolio_diversity(total_equity)
+    DbAccess.calc_pl_from_order_history()
+    DbAccess.calc_my_stock_positions()
+    DbAccess.calc_my_option_positions()
+
+    portfolio_cash              = DbAccess.get_from_db('portfolio_cash')
+    stocks_equity               = DbAccess.get_from_db('stocks_equity')
+    options_equity              = DbAccess.get_from_db('options_equity')
+    total_equity                = stocks_equity + options_equity + portfolio_cash
+
+    today_stocks_realized_pl    = DbAccess.get_from_db('today_stocks_realized_pl')
+    total_stocks_realized_pl    = DbAccess.get_from_db('total_stocks_realized_pl')
+    today_stocks_unrealized_pl  = DbAccess.get_from_db('today_stocks_unrealized_pl')
+    total_stocks_unrealized_pl  = DbAccess.get_from_db('total_stocks_unrealized_pl')
+
+    today_options_unrealized_pl = DbAccess.get_from_db('today_options_unrealized_pl')
+    total_options_unrealized_pl = DbAccess.get_from_db('total_options_unrealized_pl')
+
+    DbAccess.set_to_db('options_equity', total_equity)
+    DbAccess.calc_portfolio_diversity(total_equity)
 
     labels.append('stocks_equity')
     labels.append('options_equity')
@@ -99,12 +109,11 @@ def summary(request):
     return render(request, 'summary.html', data_for_template)
 
 def options(request):
-    qset = robinhood_options.objects.all()
+    qset = options_held.objects.all()
     if request.method == 'POST':
         long_term_list = request.POST.getlist('long_term')
         for item in qset:
             if item.option_id in long_term_list:
-                print (item.chain_symbol)
                 item.long_term = True
             else:
                 item.long_term = False
@@ -115,7 +124,7 @@ def options(request):
     return render(request, 'options.html', ctx)
 
 def stocks(request):
-    qset = robinhood_stocks.objects.all()
+    qset = stocks_held.objects.all()
     if request.method == 'POST':
         long_term_list = request.POST.getlist('long_term')
         for item in qset:
