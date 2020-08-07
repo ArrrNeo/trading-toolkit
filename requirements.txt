@@ -12,3 +12,8 @@ whitenoise
 django-tables2
 pyrh
 robin_stocks
+yfinance
+pandas
+lxml
+html5lib
+BeautifulSoup4

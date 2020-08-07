@@ -7,14 +7,24 @@ Copyright (c) 2019 - present AppSeed.us
 from django.db import models
 from django.contrib.auth.models import User
 
+class stocks_history(models.Model):
+    date                        = models.DateField()                                                        # raw
+    symbol                      = models.CharField(max_length=5)                                            # raw
+    open_price                  = models.FloatField(default=0)                                              # raw
+    high                        = models.FloatField(default=0)                                              # raw
+    low                         = models.FloatField(default=0)                                              # raw
+    close_price                 = models.FloatField(default=0)                                              # raw
+    adj_price                   = models.FloatField(default=0)                                              # raw
+    volume                      = models.IntegerField(default=0)                                            # raw
+
 # Create your models here.
 class portfolio_summary(models.Model):
     timestamp                    = models.DateTimeField()
     stocks_equity                = models.FloatField(default=0)                                             # processed
     options_equity               = models.FloatField(default=0)                                             # processed
     portfolio_cash               = models.FloatField(default=0)                                             # processed, sum of portfolio cash from all brokers
-    today_realized_pl            = models.FloatField(default=0)                                             # processed
-    total_realized_pl            = models.FloatField(default=0)                                             # processed
+    today_stocks_realized_pl     = models.FloatField(default=0)                                             # processed
+    total_stocks_realized_pl     = models.FloatField(default=0)                                             # processed
     today_stocks_unrealized_pl   = models.FloatField(default=0)                                             # processes
     total_stocks_unrealized_pl   = models.FloatField(default=0)                                             # processes
     today_options_unrealized_pl  = models.FloatField(default=0)                                             # processes
@@ -28,6 +38,7 @@ class stocks_held(models.Model):
     average_price           = models.FloatField()                                                           # raw
     quantity                = models.FloatField()                                                           # raw
     open_price              = models.FloatField()                                                           # raw
+    prev_close_price        = models.FloatField()                                                           # raw
     latest_price            = models.FloatField()                                                           # raw
     # following fields are post processed after broker's API fetching is complete
     pp_equity               = models.FloatField(default=0)                                                  # processed

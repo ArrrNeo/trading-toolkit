@@ -27,6 +27,7 @@
                     <th> equity </th>
                     <th> cost_basis </th>
                     <th> open_price </th>
+                    <th> prev_close_price </th>
                     <th> latest_price </th>
                     <th> unrealized_pl </th>
                     <th> today_unrealized_pl </th>
@@ -43,6 +44,7 @@
                       <td> {{ row.pp_equity | floatformat:2 }} </td>
                       <td> {{ row.pp_cost_basis | floatformat:2 }} </td>
                       <td> {{ row.open_price | floatformat:2 }} </td>
+                      <td> {{ row.prev_close_price | floatformat:2 }} </td>
                       <td> {{ row.latest_price | floatformat:2 }} </td>
                       <td> {{ row.pp_unrealized_pl | floatformat:2 }} </td>
                       <td> {{ row.pp_today_unrealized_pl | floatformat:2 }} </td>

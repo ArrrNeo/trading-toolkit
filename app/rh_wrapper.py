@@ -25,6 +25,7 @@ from app.models import robinhood_stock_order_history
 from app.models import robinhood_traded_stocks
 from app.models import robinhood_stock_order_history_next_urls
 from app.db_access import DbAccess
+from app.stock_utils import StockUtils
 
 """
 stock position element
@@ -205,6 +206,11 @@ class RhWrapper():
                 obj.average_price       = float(item['average_buy_price'])
                 obj.latest_price        = float(r.get_latest_price(obj.symbol)[0])
                 obj.open_price          = float(r.get_fundamentals(obj.symbol)[0]['open'])
+                try:
+                    obj.prev_close_price    = float(StockUtils.getStockInfo(obj.symbol)['previousClose'])
+                except Exception as e:
+                    print (str(e) + ' encountered when fetchuing yahoo data for ' + obj.symbol)
+                    obj.prev_close_price = obj.open_price
                 obj.save()
 
             # remove current entries
@@ -225,9 +231,14 @@ class RhWrapper():
                 obj.trade_value_multiplier = float(item['trade_value_multiplier'])
                 obj.average_price          = float(item['average_price']) / obj.trade_value_multiplier
                 obj.quantity               = float(item['quantity'])
+                # adjust value for sold calls
+                if obj.average_price < 0:
+                    obj.average_price      = (-1) * obj.average_price
+                    obj.quantity           = (-1) * obj.quantity
                 market_data                = r.get_option_market_data_by_id(obj.option_id)
                 obj.previous_close_price   = float(market_data['previous_close_price'])
                 obj.current_price          = float(market_data['adjusted_mark_price'])
+                # print('symbol: %5s strike_price: %7.2f option_type: %4s expiration_date: %12s trade_value_multiplier: %d average_price: %7.2f quantity: %d previous_close_price: %7.2f current_price: %7.2f' % (obj.symbol, obj.strike_price, obj.option_type, obj.expiration_date, obj.trade_value_multiplier, obj.average_price, obj.quantity, obj.previous_close_price, obj.current_price))
                 obj.save()
 
     @staticmethod

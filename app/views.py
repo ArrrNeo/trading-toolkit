@@ -12,9 +12,14 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from app.rh_wrapper import RhWrapper
 from app.db_access import DbAccess
+from app.stock_utils import StockUtils
 from app.models import options_held, stocks_held
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
+
+# import datetime
+# from datetime import date
+# import dateutil.relativedelta
 
 @login_required(login_url="/login/")
 def index(request):
@@ -38,6 +43,34 @@ def pages(request):
         return HttpResponse(html_template.render(context, request))
 
 def summary(request):
+    # currentDate = datetime.datetime.strptime(date.today().strftime("%Y-%m-%d"), "%Y-%m-%d")
+    # pastDate = currentDate - dateutil.relativedelta.relativedelta(days=91)
+    # # StockUtils.getHistoryData('SQ', pastDate, currentDate)
+    # my_shared = {
+    #     'SPY' :   14,
+    #     'JD'  :   40,
+    #     'NIO' :   450,
+    #     'BEP' :   73,
+    #     'BABA':   20,
+    #     'CMG' :   2,
+    #     'DIS' :   14,
+    #     'ROKU':   9,
+    #     'SHOP':   3,
+    #     'SPOT':   6,
+    #     'AMD' :   43,
+    #     'IRBT':   28,
+    #     'NVDA':   4,
+    #     'NFLX':   7,
+    #     'SBUX':   22,
+    #     'TSLA':   3,
+    #     'FB'  :   17,
+    #     'GOOG':   4,
+    #     'AMZN':   2,
+    #     'AAPL':   22,
+    #     'MSFT':   44
+    # }
+    # print (StockUtils.getHistoricValue(my_shared, pastDate))
+    # return render(request, 'summary.html')
     total_equity = 0
     stocks_equity = 0
     portfolio_cash = 0

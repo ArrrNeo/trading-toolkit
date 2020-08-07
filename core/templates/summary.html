@@ -233,13 +233,13 @@
   window.onload = function ()
   {
     var ctx = document.getElementById('piechartportfolio').getContext('2d');
-    new Chart(ctx, { type: 'pie', data: portfoliodata, options: {responsive: true, legend: { display: true }} });
+    new Chart(ctx, { type: 'doughnut', data: portfoliodata, options: {responsive: true, legend: { display: true }} });
 
     var ctx = document.getElementById('piechartstocks').getContext('2d');
-    new Chart(ctx, { type: 'pie', data: stocksdata, options: {responsive: true, legend: { display: true }} });
+    new Chart(ctx, { type: 'doughnut', data: stocksdata, options: {responsive: true, legend: { display: true }} });
 
     var ctx = document.getElementById('piechartoptions').getContext('2d');
-    new Chart(ctx, { type: 'pie', data: optionsdata, options: {responsive: true, legend: { display: true }} });
+    new Chart(ctx, { type: 'doughnut', data: optionsdata, options: {responsive: true, legend: { display: true }} });
   
     var ctx = document.getElementById('barChart').getContext('2d');
     new Chart(ctx, { type: 'bar', data: portfoliodata, options: barchartoptions });

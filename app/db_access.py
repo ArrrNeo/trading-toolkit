@@ -43,7 +43,7 @@ class DbAccess():
             item.pp_equity              = item.latest_price * item.quantity
             item.pp_cost_basis          = item.average_price * item.quantity
             item.pp_unrealized_pl       = item.pp_equity - item.pp_cost_basis
-            item.pp_today_unrealized_pl = item.pp_equity - (item.open_price * item.quantity)
+            item.pp_today_unrealized_pl = item.pp_equity - (item.prev_close_price * item.quantity)
             item.save()
 
             equity_total             = equity_total + item.pp_equity
@@ -204,8 +204,8 @@ class DbAccess():
             order.processed           = True
             order.save()
 
-            summary.total_realized_pl = summary.total_realized_pl + stocks[order.symbol]['order_realized_pl']
-            summary.today_realized_pl = summary.today_realized_pl + stocks[order.symbol]['today_realized_pl']
+            summary.total_stocks_realized_pl = summary.total_stocks_realized_pl + stocks[order.symbol]['order_realized_pl']
+            summary.today_stocks_realized_pl = summary.today_stocks_realized_pl + stocks[order.symbol]['today_realized_pl']
             summary.save()
 
         # parse disctionary created
@@ -263,10 +263,10 @@ class DbAccess():
             return obj[0].options_equity
         if x == 'portfolio_cash':
             return obj[0].portfolio_cash
-        if x == 'today_realized_pl':
-            return obj[0].today_realized_pl
-        if x == 'total_realized_pl':
-            return obj[0].total_realized_pl
+        if x == 'today_stocks_realized_pl':
+            return obj[0].today_stocks_realized_pl
+        if x == 'total_stocks_realized_pl':
+            return obj[0].total_stocks_realized_pl
         if x == 'today_stocks_unrealized_pl':
             return obj[0].today_stocks_unrealized_pl
         if x == 'total_stocks_unrealized_pl':
@@ -289,10 +289,10 @@ class DbAccess():
             obj[0].options_equity = val
         if x == 'portfolio_cash':
             obj[0].portfolio_cash = val
-        if x == 'today_realized_pl':
-            obj[0].today_realized_pl = val
-        if x == 'total_realized_pl':
-            obj[0].total_realized_pl = val
+        if x == 'today_stocks_realized_pl':
+            obj[0].today_stocks_realized_pl = val
+        if x == 'total_stocks_realized_pl':
+            obj[0].total_stocks_realized_pl = val
         if x == 'today_stocks_unrealized_pl':
             obj[0].today_stocks_unrealized_pl = val
         if x == 'total_stocks_unrealized_pl':
