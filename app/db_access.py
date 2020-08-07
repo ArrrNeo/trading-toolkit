@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 # misc imports
+import datetime
 from django.utils import timezone
 
 # db imports
@@ -13,7 +14,7 @@ from app.models import robinhood_traded_stocks
 from app.models import robinhood_stock_order_history_next_urls
 
 #refresh time in minutes
-REFRESH_TIME = 1
+REFRESH_TIME = 15
 
 class DbAccess():
     ############################################################################################################
@@ -195,7 +196,7 @@ class DbAccess():
 
 
                 stocks[order.symbol]['total_realized_pl']    = stocks[order.symbol]['total_realized_pl'] + stocks[order.symbol]['order_realized_pl']
-                if order.timestamp.date() == timezone.now().date():
+                if order.timestamp.date() == datetime.datetime.now().date():
                     # order was sell and date was today
                     stocks[order.symbol]['today_realized_pl'] = stocks[order.symbol]['today_realized_pl'] + stocks[order.symbol]['order_realized_pl']
 
