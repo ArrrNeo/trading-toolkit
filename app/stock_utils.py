@@ -55,3 +55,10 @@ class StockUtils():
     def getStockInfo(ticker):
         data = yf.Ticker(ticker)
         return data.info
+
+    @staticmethod
+    # get stock info from yahoo finance
+    def getOptions(ticker, date):
+        obj = yf.Ticker(ticker)
+        data = obj.option_chain(date).calls[['ask', 'strike']]
+        return data.to_dict('records')

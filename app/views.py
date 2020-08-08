@@ -16,6 +16,7 @@ from app.stock_utils import StockUtils
 from app.models import options_held, stocks_held
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
+from heapq import nsmallest
 
 # import datetime
 # from datetime import date
@@ -188,3 +189,22 @@ def stocks(request):
     ctx = {}
     ctx['table'] = list(qset)
     return render(request, 'stocks.html', ctx)
+
+def options_chart(request):
+    if request.method == 'POST':
+        ticker = request.POST.get('ticker')
+        date = str(request.POST.get('date'))
+        num_strikes = int(request.POST.get('num_strikes'))
+        info = StockUtils.getStockInfo(ticker)
+        curr_price = (info['bid'] + info['ask'])/2
+        ctx = {}
+        data = StockUtils.getOptions(ticker, date)
+        data = nsmallest(num_strikes, data, key=lambda x: abs(x['strike'] - curr_price))
+        data = sorted(data, key=lambda k: k['strike']) 
+        ctx['y'] = [x['ask'] for x in data]
+        ctx['x'] = [x['strike'] for x in data]
+        ctx['x_axis'] = 'strike_price'
+        ctx['y_axis'] = 'premium'
+        return render(request, 'options_chart.html', ctx)
+    else:
+        return render(request, 'options_chart.html')

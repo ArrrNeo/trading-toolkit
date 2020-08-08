@@ -1,0 +1,58 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %} Summary {% endblock %}
+<!-- Specific Plugin CSS goes HERE -->
+{% block plugin_stylesheets %}{% endblock plugin_stylesheets %}
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}{% endblock stylesheets %}
+{% block content %}
+
+<form action="/options_chart/" method="POST">
+  <label for="ticker">ticker: </label>
+  <input id="ticker" type="text" name="ticker" value="{{ current_name }}">
+  <label for="date">date: </label>
+  <input id="date" type="date" name="date" value="{{ current_name }}">
+  <label for="num_strikes">num_strikes: </label>
+  <input id="num_strikes" type="text" name="num_strikes" value="{{ current_name }}">
+  <input type="submit" value="submit" name='submit'>
+  {% csrf_token %}
+  <!-- {{ form }} -->
+  <div class="content-wrapper">
+    <div class="row stretch-card">
+      <div class="card">
+        <div class="card-body">
+          <h4 class="card-title">Line chart</h4>
+          <div id="chartContainer" style="height: 500px; width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+{% endblock content %}
+{% block plugin_javascripts %}
+<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+{% endblock plugin_javascripts %}
+{% block javascripts %}
+<script>
+  var data =
+  [{
+    type: "line",
+    indexLabelFontSize: 16,
+    dataPoints: []
+  }];
+  
+  window.onload = function () {
+    var xx = {{x | safe}};
+    var yy = {{y | safe}};
+    var x_axis_label = "{{x_axis}}";
+    var y_axis_label = "{{y_axis}}";
+    var chart = new CanvasJS.Chart("chartContainer", { animationEnabled: false, theme : "light2", axisX: [{title: x_axis_label}], axisY: [{title: y_axis_label}], title : {text: "Simple Line Chart"}, data : data });
+    var index;
+    for (index = 0; index < xx.length; ++index) {
+      chart.options.data[0].dataPoints.push(    { x: xx[index], y:  yy[index]}    );
+    }
+    chart.render();
+  }
+</script>
+{% endblock javascripts %}
