@@ -138,6 +138,7 @@ class DbAccess():
         # parse complete robinhood_stock_order_history.
         # and calcaulate, avg, quantity, equity, realized_pl at end of each transaction
         for order in orders:
+            old_avg = 0
             sell_order_exception = False
             prev_ticker = ''
             # if symbol in stock_split:
@@ -150,6 +151,7 @@ class DbAccess():
                     if split_event.ratio != 0:
                         # update previous stock avg and quantity
                         stocks[order.symbol]['total_quantity'] = stocks[order.symbol]['total_quantity'] * split_event.ratio
+                        old_avg = stocks[order.symbol]['average_price']
                         stocks[order.symbol]['average_price']  = stocks[order.symbol]['average_price'] / split_event.ratio
                     else:
                         sell_order_exception = True
@@ -160,6 +162,8 @@ class DbAccess():
                     stocks[order.symbol] = {}
                     stocks[order.symbol]['total_quantity']          = order.shares
                     stocks[order.symbol]['average_price']           = order.price
+                    # first time buy order, so old_avg is same as current avg
+                    old_avg = stocks[order.symbol]['average_price']
                     stocks[order.symbol]['cost_basis']              = order.shares * order.price
                     stocks[order.symbol]['order_realized_pl']       = 0
                     stocks[order.symbol]['total_realized_pl']       = 0
@@ -167,6 +171,8 @@ class DbAccess():
                 else:
                     stocks[order.symbol]['total_quantity']          = stocks[order.symbol]['total_quantity'] + order.shares
                     stocks[order.symbol]['cost_basis']              = stocks[order.symbol]['cost_basis'] + order.shares * order.price
+                    # avg price changes due to buy for existing stock, save old avg
+                    old_avg = stocks[order.symbol]['average_price']
                     stocks[order.symbol]['average_price']           = stocks[order.symbol]['cost_basis'] / stocks[order.symbol]['total_quantity']
                     # no change in total_realized_pl/today_realized_pl, but realized_pl = 0 since this was buy order
                     stocks[order.symbol]['order_realized_pl']       = 0
@@ -180,20 +186,25 @@ class DbAccess():
                         stocks[order.symbol]['today_realized_pl'] = 0
                         stocks[order.symbol]['total_realized_pl'] = 0
                         stocks[order.symbol]['average_price']     = stocks[prev_ticker]['cost_basis']/order.shares
+                        # order was sell old_avg = current avg
+                        old_avg = stocks[order.symbol]['average_price']
                         stocks[order.symbol]['order_realized_pl'] = (order.price * order.shares) - stocks[prev_ticker]['cost_basis']
                         # delete prev ticker entry for dic
                         print ('deleting prev ticker: ' + prev_ticker)
                         stocks.pop(prev_ticker, None)
                     else:
                         # fatal error
-                        print (order.symbol + ': sell without buy, check order history')
+                        print (order.symbol + ': sell without buy, check order history. fix BEPC.')
+                        order.processed = True
+                        order.save()
                         continue
                 else:
+                    # order was sell old_avg = current avg
+                    old_avg = stocks[order.symbol]['average_price']
                     stocks[order.symbol]['total_quantity'] = stocks[order.symbol]['total_quantity'] - order.shares
                     stocks[order.symbol]['cost_basis']     = stocks[order.symbol]['total_quantity'] * stocks[order.symbol]['average_price']
                     # realized_pl is only the profit/loss in this order
                     stocks[order.symbol]['order_realized_pl'] = (order.price - stocks[order.symbol]['average_price']) * order.shares
-
 
                 stocks[order.symbol]['total_realized_pl']    = stocks[order.symbol]['total_realized_pl'] + stocks[order.symbol]['order_realized_pl']
                 if order.timestamp.date() == datetime.datetime.now().date():
@@ -203,6 +214,8 @@ class DbAccess():
             stocks[order.symbol]['last_trade_ts'] = order.timestamp
             # update the same values in the transaction table
             order.processed           = True
+            order.old_average_price   = old_avg
+            order.new_average_price   = stocks[order.symbol]['average_price']
             order.save()
 
             summary.total_stocks_realized_pl = summary.total_stocks_realized_pl + stocks[order.symbol]['order_realized_pl']

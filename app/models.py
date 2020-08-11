@@ -103,7 +103,8 @@ class robinhood_stock_order_history(models.Model):
     price                  = models.FloatField()                                                            # raw
     timestamp              = models.DateTimeField()                                                         # raw
     # following fields are calculated and added to table as order history is parsed                         #
-    order_realized_pl      = models.FloatField(default=0)                                                   # processed
     processed              = models.BooleanField(default=False)                                             # processed
+    old_average_price      = models.FloatField(default=0)                                                   # processed
+    new_average_price      = models.FloatField(default=0)                                                   # processed
     # avg from day prior to last day of order history will
     # be used to calculate today's realized/unrealized
