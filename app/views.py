@@ -194,21 +194,21 @@ def stocks(request):
 def options_chart(request):
     ctx = {}
     ticker = 'ROKU'
-    date = (StockUtils.getOptionsDate(ticker)[0])
+    option_date = (StockUtils.getOptionsDate(ticker)[0])
     num_strikes = 10
 
     if request.method == 'POST':
         ticker = request.POST.get('ticker')
-        date = str(request.POST.get('date'))
+        option_date = str(request.POST.get('date'))
         num_strikes = int(request.POST.get('num_strikes'))
 
     ctx['ticker'] = ticker
-    ctx['date'] = date
+    ctx['date'] = option_date
     ctx['num_strikes'] = num_strikes
 
     info = StockUtils.getStockInfo(ticker)
     curr_price = (info['bid'] + info['ask'])/2
-    data = StockUtils.getOptions(ticker, date)
+    data = StockUtils.getOptions(ticker, option_date)
     data = nsmallest(num_strikes, data, key=lambda x: abs(x['strike'] - curr_price))
     data = sorted(data, key=lambda k: k['strike']) 
     ctx['y'] = [x['ask'] for x in data]
@@ -224,10 +224,12 @@ def options_chart(request):
             entry = {}
             entry['premium'] = data[i]['ask'] - data[j]['bid']
             entry['max_profit'] = (data[j]['strike'] - data[i]['strike']) - entry['premium']
-            entry['max_profit_pc'] = (entry['max_profit'] / entry['premium']) * 100
-            entry['trade'] = 'buy: ' + str(data[i]['strike']) + 'c, sell: ' + str(data[j]['strike']) + 'c'
             entry['long_strike'] = data[i]['strike']
             entry['short_strike'] = data[j]['strike']
+            entry['trade'] = 'buy: ' + str(entry['long_strike']) + 'c, sell: ' + str(entry['short_strike']) + 'c'
+            if entry['premium'] == 0:
+                continue
+            entry['max_profit_pc'] = (entry['max_profit'] / entry['premium']) * 100
             calculations.append(entry)
     calculations = sorted(calculations, key=lambda k: k['max_profit_pc'])
 
