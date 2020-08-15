@@ -7,15 +7,11 @@ Copyright (c) 2019 - present AppSeed.us
 from django.db import models
 from django.contrib.auth.models import User
 
-class stocks_history(models.Model):
-    date                        = models.DateField()                                                        # raw
-    symbol                      = models.CharField(max_length=5)                                            # raw
-    open_price                  = models.FloatField(default=0)                                              # raw
-    high                        = models.FloatField(default=0)                                              # raw
-    low                         = models.FloatField(default=0)                                              # raw
-    close_price                 = models.FloatField(default=0)                                              # raw
-    adj_price                   = models.FloatField(default=0)                                              # raw
-    volume                      = models.IntegerField(default=0)                                            # raw
+class stock_daily_db_table(models.Model):
+    date                         = models.DateField()
+    day_pl                       = models.FloatField(default=0)
+    equity_at_close              = models.FloatField(default=0)
+    day_realized_pl              = models.FloatField(default=0)
 
 # Create your models here.
 class portfolio_summary(models.Model):
@@ -74,13 +70,8 @@ class robinhood_traded_stocks(models.Model):
     symbol                 = models.CharField(max_length=5)                                                 # raw
     name                   = models.CharField(max_length=30)                                                # raw
     instrument_url         = models.CharField(max_length=92)                                                # raw
-    # following fields are running numbers maintained while parsing order history
-    pp_cost_basis          = models.FloatField(default=0)                                                   # processed
     pp_average_price       = models.FloatField(default=0)                                                   # processed
-    pp_total_quantity      = models.FloatField(default=0)                                                   # processed
-    pp_total_realized_pl   = models.FloatField(default=0)                                                   # processed
-    pp_today_realized_pl   = models.FloatField(default=0)                                                   # processed
-    pp_last_trade_ts       = models.DateTimeField(null=True)                                                # processed
+    pp_realized_pl         = models.FloatField(default=0)                                                   # processed
 
 class robinhood_stock_split_events(models.Model):
     symbol                 = models.CharField(max_length=5)                                                 # raw
@@ -102,9 +93,3 @@ class robinhood_stock_order_history(models.Model):
     shares                 = models.FloatField()                                                            # raw
     price                  = models.FloatField()                                                            # raw
     timestamp              = models.DateTimeField()                                                         # raw
-    # following fields are calculated and added to table as order history is parsed                         #
-    processed              = models.BooleanField(default=False)                                             # processed
-    old_average_price      = models.FloatField(default=0)                                                   # processed
-    new_average_price      = models.FloatField(default=0)                                                   # processed
-    # avg from day prior to last day of order history will
-    # be used to calculate today's realized/unrealized

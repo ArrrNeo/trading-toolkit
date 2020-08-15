@@ -1,16 +1,19 @@
 #!/usr/bin/python3
 
 # misc imports
+# import pprint
 import datetime
 from django.utils import timezone
+from app.stock_utils import StockUtils
 
 # db imports
 from app.models import stocks_held
 from app.models import options_held
 from app.models import portfolio_summary
+from app.models import stock_daily_db_table
+from app.models import robinhood_traded_stocks
 from app.models import robinhood_stock_split_events
 from app.models import robinhood_stock_order_history
-from app.models import robinhood_traded_stocks
 from app.models import robinhood_stock_order_history_next_urls
 
 #refresh time in minutes
@@ -108,136 +111,154 @@ class DbAccess():
             item.save()
 
     @staticmethod
-    def calc_pl_from_order_history():
-        # in following dict, key is symbol and value is another dict with
-        # quantity/avg_price/equity/realized_pl as keys of nested dict
-        # init content of following dict from table robinhood_traded_stocks
-        stocks = {}
-        all_traded_stocks = robinhood_traded_stocks.objects.all()
-        for obj in all_traded_stocks:
-            # only read tickers which have been traded and processed. this check will protect against reading total_quantity as 0
-            if obj.pp_last_trade_ts:
-                symbol = obj.symbol
-                stocks[symbol] = {}
-                stocks[symbol]['cost_basis']        = obj.pp_cost_basis
-                stocks[symbol]['average_price']     = obj.pp_average_price
-                stocks[symbol]['total_quantity']    = obj.pp_total_quantity
-                stocks[symbol]['total_realized_pl'] = obj.pp_total_realized_pl
-                stocks[symbol]['today_realized_pl'] = obj.pp_today_realized_pl
-                stocks[symbol]['last_trade_ts']     = obj.pp_last_trade_ts
+    def process_all_orders():
+        portfolio = {}
+        stock_daily_table = []
+        total_stocks_realized_pl = 0
+        delta = datetime.timedelta(days=1)
 
-        # for realized_pl today/total
-        summary = portfolio_summary.objects.all()
-        if summary:
-            summary = summary[0]
+        orders = robinhood_stock_order_history.objects.all().order_by('timestamp')
+        order_list = list(orders.values())
+        curr_date = order_list[0]['timestamp'].date()
+        end_date = order_list[-1]['timestamp'].date()
+        idx = 0
+        all_tickers = list(set([x['symbol'] for x in order_list]))
+        history_data = StockUtils.getHistoryData(all_tickers, curr_date, end_date)
+        while curr_date <= end_date:
+            if StockUtils.is_market_holiday(curr_date, history_data):
+                curr_date += delta
+                continue
+            idx = DbAccess.process_day_orders(idx, curr_date, portfolio, order_list, stock_daily_table, history_data)
+            total_stocks_realized_pl = total_stocks_realized_pl + stock_daily_table[-1]['day_realized_pl']
+            curr_date += delta
+
+        DbAccess.set_to_db('total_stocks_realized_pl', total_stocks_realized_pl)
+        DbAccess.set_to_db('today_stocks_realized_pl', stock_daily_table[-1]['day_realized_pl'])
+
+        for key in portfolio.keys():
+            obj = robinhood_traded_stocks.objects.filter(symbol=key)[0]
+            obj.pp_average_price = portfolio[key]['average_price']
+            obj.save()
+
+        django_list = [stock_daily_db_table(**vals) for vals in stock_daily_table]
+        stock_daily_db_table.objects.bulk_create(django_list)
+
+        # todo: make sure final portfolio matches rh_fetched_portfolio.
+
+    @staticmethod
+    def process_day_orders(idx, curr_date, portfolio, order_list, stock_daily_table, history_data):
+        day_entry = {}
+        day_change = 0
+        day_realized_pl = 0
+
+        try:
+            equity_at_prev_close = stock_daily_table[-1][equity_at_close]
+        except Exception as e:
+            equity_at_prev_close = 0
+        day_entry['date'] = curr_date
+        # following will be used later when calculating stocks traded in given period
+        # day_entry['portfolio_start'] = portfolio
+        while idx < len(order_list):
+            if order_list[idx]['timestamp'].date() == curr_date:
+                order_change, order_realized_pl = DbAccess.process_single_order(portfolio, order_list[idx])
+                day_change = day_change + order_change
+                day_realized_pl = day_realized_pl + order_realized_pl
+            else:
+                break
+            idx = idx + 1
+
+        # calcaulate equity_at_close
+        equity_at_close = StockUtils.getHistoricValue(portfolio, curr_date, history_data)
+        day_pl = equity_at_close - equity_at_prev_close + day_change
+        day_entry['equity_at_close'] = equity_at_close
+        # following will be used later when calculating stocks traded in given period
+        # day_entry['portfolio_end']   = portfolio
+        day_entry['day_pl']          = day_pl
+        day_entry['day_realized_pl'] = day_realized_pl
+        stock_daily_table.append(day_entry)
+        # delete enrties with 0 shares
+        zero_stocks = [x for x in portfolio.keys() if portfolio[x]['total_quantity'] == 0]
+        for ticker in zero_stocks:
+            portfolio.pop(ticker, 'None')
+        return idx
+
+    @staticmethod
+    def process_single_order(portfolio, order):
+        DbAccess.update_stock_for_split(portfolio, order)
+        if order['order_type'] == 'buy':
+            return DbAccess.process_buy_order(portfolio, order)
         else:
-            summary = portfolio_summary()
-            summary.timestamp = timezone.now()
+            return DbAccess.process_sell_order(portfolio, order)
 
-        orders = robinhood_stock_order_history.objects.filter(processed=False).order_by('timestamp')
-        # parse complete robinhood_stock_order_history.
-        # and calcaulate, avg, quantity, equity, realized_pl at end of each transaction
-        for order in orders:
-            old_avg = 0
-            sell_order_exception = False
-            prev_ticker = ''
-            # if symbol in stock_split:
-            split_event = robinhood_stock_split_events.objects.filter(new_symbol=order.symbol)
-            if split_event and split_event[0].processed == False:
-                split_event = split_event[0]
-                if order.timestamp.date() > split_event.date:
-                    split_event.processed = True
-                    split_event.save()
-                    if split_event.ratio != 0:
-                        # update previous stock avg and quantity
-                        stocks[order.symbol]['total_quantity'] = stocks[order.symbol]['total_quantity'] * split_event.ratio
-                        old_avg = stocks[order.symbol]['average_price']
-                        stocks[order.symbol]['average_price']  = stocks[order.symbol]['average_price'] / split_event.ratio
-                    else:
-                        sell_order_exception = True
-                        prev_ticker = split_event.symbol
-                        print ('adding exception for old_ticker: ' + split_event.symbol + ' new_ticker: ' + order.symbol)
-            if order.order_type == 'buy':
-                if order.symbol not in stocks:
-                    stocks[order.symbol] = {}
-                    stocks[order.symbol]['total_quantity']          = order.shares
-                    stocks[order.symbol]['average_price']           = order.price
-                    # first time buy order, so old_avg is same as current avg
-                    old_avg = stocks[order.symbol]['average_price']
-                    stocks[order.symbol]['cost_basis']              = order.shares * order.price
-                    stocks[order.symbol]['order_realized_pl']       = 0
-                    stocks[order.symbol]['total_realized_pl']       = 0
-                    stocks[order.symbol]['today_realized_pl']       = 0
-                else:
-                    stocks[order.symbol]['total_quantity']          = stocks[order.symbol]['total_quantity'] + order.shares
-                    stocks[order.symbol]['cost_basis']              = stocks[order.symbol]['cost_basis'] + order.shares * order.price
-                    # avg price changes due to buy for existing stock, save old avg
-                    old_avg = stocks[order.symbol]['average_price']
-                    stocks[order.symbol]['average_price']           = stocks[order.symbol]['cost_basis'] / stocks[order.symbol]['total_quantity']
-                    # no change in total_realized_pl/today_realized_pl, but realized_pl = 0 since this was buy order
-                    stocks[order.symbol]['order_realized_pl']       = 0
+    @staticmethod
+    def update_stock_for_split(portfolio, order):
+        split_event = robinhood_stock_split_events.objects.filter(new_symbol=order['symbol'])
+
+        if not split_event:
+            return
+
+        if split_event[0].processed == True:
+            return
+
+        split_event = split_event[0]
+        if order['timestamp'].date() < split_event.date:
+            return
+
+        print ('processing split old: ' + split_event.symbol + ' new: ' + split_event.new_symbol)
+
+        split_event.processed = True
+        split_event.save()
+        if split_event.new_symbol != split_event.symbol:
+            # delete previous entry and, add new entry with same amount of equity
+            cost_basis = portfolio[split_event.symbol]['cost_basis']
+            portfolio[split_event.symbol] = {}
+            portfolio[split_event.symbol]['cost_basis'] = 0
+            portfolio[split_event.symbol]['average_price'] = 0
+            portfolio[split_event.symbol]['total_quantity'] = 0
+            portfolio[split_event.new_symbol] = {}
+            portfolio[split_event.new_symbol]['cost_basis'] = cost_basis
+            portfolio[split_event.new_symbol]['total_quantity'] = 0
+        if split_event.ratio != 0:
+            # update previous stock avg and quantity
+            portfolio[order['symbol']]['total_quantity'] = portfolio[order['symbol']]['total_quantity'] * split_event.ratio
+            portfolio[order['symbol']]['average_price']  = portfolio[order['symbol']]['average_price'] / split_event.ratio
+
+    @staticmethod
+    def process_buy_order(portfolio, order):
+        # for net sales change is +ve, for net purchases change is -ve
+        # order was buy
+        if order['symbol'] not in portfolio:
+            portfolio[order['symbol']] = {}
+            portfolio[order['symbol']]['total_quantity'] = order['shares']
+            portfolio[order['symbol']]['average_price']  = order['price']
+            portfolio[order['symbol']]['cost_basis']     = order['shares'] * order['price']
+        else:
+            portfolio[order['symbol']]['total_quantity'] = portfolio[order['symbol']]['total_quantity'] + order['shares']
+            portfolio[order['symbol']]['cost_basis']     = portfolio[order['symbol']]['cost_basis'] + order['shares'] * order['price']
+            portfolio[order['symbol']]['average_price']  = portfolio[order['symbol']]['cost_basis'] / portfolio[order['symbol']]['total_quantity']
+        change = -1 * (order['shares'] * order['price'])
+        return change, 0
+
+    @staticmethod
+    def process_sell_order(portfolio, order):
+        # for net sales change is +ve, for net purchases change is -ve
+        # order was sell
+        change = order['shares'] * order['price']
+        if order['symbol'] not in portfolio:
+            print (order['symbol'] + ': sell without buy, check order history. fix for BEPC.')
+            realized_profit_loss = change
+        else:
+            if portfolio[order['symbol']]['total_quantity'] == 0:
+                # this was result of split
+                realized_profit_loss = change - portfolio[order['symbol']]['cost_basis']
             else:
-                # order was sell
-                if order.symbol not in stocks:
-                    if sell_order_exception is True:
-                        stocks[order.symbol] = {}
-                        stocks[order.symbol]['cost_basis']        = 0
-                        stocks[order.symbol]['total_quantity']    = 0
-                        stocks[order.symbol]['today_realized_pl'] = 0
-                        stocks[order.symbol]['total_realized_pl'] = 0
-                        stocks[order.symbol]['average_price']     = stocks[prev_ticker]['cost_basis']/order.shares
-                        # order was sell old_avg = current avg
-                        old_avg = stocks[order.symbol]['average_price']
-                        stocks[order.symbol]['order_realized_pl'] = (order.price * order.shares) - stocks[prev_ticker]['cost_basis']
-                        # delete prev ticker entry for dic
-                        print ('deleting prev ticker: ' + prev_ticker)
-                        stocks.pop(prev_ticker, None)
-                    else:
-                        # fatal error
-                        print (order.symbol + ': sell without buy, check order history. fix BEPC.')
-                        order.processed = True
-                        order.save()
-                        continue
-                else:
-                    # order was sell old_avg = current avg
-                    old_avg = stocks[order.symbol]['average_price']
-                    stocks[order.symbol]['total_quantity'] = stocks[order.symbol]['total_quantity'] - order.shares
-                    stocks[order.symbol]['cost_basis']     = stocks[order.symbol]['total_quantity'] * stocks[order.symbol]['average_price']
-                    # realized_pl is only the profit/loss in this order
-                    stocks[order.symbol]['order_realized_pl'] = (order.price - stocks[order.symbol]['average_price']) * order.shares
-
-                stocks[order.symbol]['total_realized_pl']    = stocks[order.symbol]['total_realized_pl'] + stocks[order.symbol]['order_realized_pl']
-                if order.timestamp.date() == datetime.datetime.now().date():
-                    # order was sell and date was today
-                    stocks[order.symbol]['today_realized_pl'] = stocks[order.symbol]['today_realized_pl'] + stocks[order.symbol]['order_realized_pl']
-
-            stocks[order.symbol]['last_trade_ts'] = order.timestamp
-            # update the same values in the transaction table
-            order.processed           = True
-            order.old_average_price   = old_avg
-            order.new_average_price   = stocks[order.symbol]['average_price']
-            order.save()
-
-            summary.total_stocks_realized_pl = summary.total_stocks_realized_pl + stocks[order.symbol]['order_realized_pl']
-            summary.today_stocks_realized_pl = summary.today_stocks_realized_pl + stocks[order.symbol]['today_realized_pl']
-            summary.save()
-
-        # parse disctionary created
-        # update same fields in robinhood_traded_stocks
-        for symbol in stocks.keys():
-            obj = robinhood_traded_stocks.objects.filter(symbol=symbol)
-            if not obj:
-                # fatal error
-                print (symbol + ' not present in lookup table..')
-            else:
-                obj = obj[0]
-                obj.pp_cost_basis        = stocks[symbol]['cost_basis']
-                obj.pp_average_price     = stocks[symbol]['average_price']
-                obj.pp_total_quantity    = stocks[symbol]['total_quantity']
-                obj.pp_total_realized_pl = stocks[symbol]['total_realized_pl']
-                obj.pp_today_realized_pl = stocks[symbol]['today_realized_pl']
-                obj.pp_last_trade_ts     = stocks[symbol]['last_trade_ts']
-                obj.save()
+                portfolio[order['symbol']]['total_quantity'] = portfolio[order['symbol']]['total_quantity'] - order['shares']
+                portfolio[order['symbol']]['cost_basis'] = portfolio[order['symbol']]['total_quantity'] * portfolio[order['symbol']]['average_price']
+                realized_profit_loss = order['shares'] * (order['price'] - portfolio[order['symbol']]['average_price'])
+        obj = robinhood_traded_stocks.objects.filter(symbol=order['symbol'])[0]
+        obj.pp_realized_pl = obj.pp_realized_pl + realized_profit_loss
+        obj.save()
+        return change, realized_profit_loss
 
     ############################################################################################################
     ## APIs to get data from db

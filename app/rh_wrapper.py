@@ -168,18 +168,31 @@ class RhWrapper():
     def rh_pull_portfolio_data(user_id, passwd):
         r.login(username=user_id, password=passwd)
 
+        # current_dir = os.path.dirname(os.path.realpath(__file__))
+        # stock_splits_csv = csv.reader(open(current_dir + '/stock_splits.csv', 'r'))
+        # for row in stock_splits_csv:
+        #     obj = robinhood_stock_split_events.objects.filter(symbol=row[0])
+        #     if not obj:
+        #         print ('adding new ticker to split table ' + str(row))
+        #         obj = robinhood_stock_split_events()
+        #         obj.symbol = row[0]
+        #         obj.date = datetime.datetime.strptime(row[1], "%Y-%m-%d").date()
+        #         obj.ratio = float(row[2])
+        #         obj.new_symbol = row[3]
+        #         obj.save()
+
+        # for now processing all orders from beginning, so re-init split everytime
+        robinhood_stock_split_events.objects.all().delete()
         current_dir = os.path.dirname(os.path.realpath(__file__))
         stock_splits_csv = csv.reader(open(current_dir + '/stock_splits.csv', 'r'))
         for row in stock_splits_csv:
-            obj = robinhood_stock_split_events.objects.filter(symbol=row[0])
-            if not obj:
-                print ('adding new ticker to split table ' + str(row))
-                obj = robinhood_stock_split_events()
-                obj.symbol = row[0]
-                obj.date = datetime.datetime.strptime(row[1], "%Y-%m-%d").date()
-                obj.ratio = float(row[2])
-                obj.new_symbol = row[3]
-                obj.save()
+            print ('adding new ticker to split table ' + str(row))
+            obj = robinhood_stock_split_events()
+            obj.symbol = row[0]
+            obj.date = datetime.datetime.strptime(row[1], "%Y-%m-%d").date()
+            obj.ratio = float(row[2])
+            obj.new_symbol = row[3]
+            obj.save()
 
         if DbAccess.is_update_needed():
             obj = portfolio_summary.objects.all()
@@ -209,7 +222,7 @@ class RhWrapper():
                 try:
                     obj.prev_close_price    = float(StockUtils.getStockInfo(obj.symbol)['previousClose'])
                 except Exception as e:
-                    print (str(e) + ' encountered when fetchuing yahoo data for ' + obj.symbol)
+                    print (str(e) + ' encountered when fetching yahoo data for ' + obj.symbol)
                     obj.prev_close_price = obj.open_price
                 obj.save()
 
@@ -246,25 +259,24 @@ class RhWrapper():
     def rh_pull_json_by_url(rb_client, url):
         return rb_client.session.get(url).json()
 
+    # rh returns latest orders batch first, older order batch later
     @staticmethod
     def rh_pull_all_history_orders(rb_client):
         orders = []
-        history_urls = robinhood_stock_order_history_next_urls.objects.all().order_by('-id')
-        if not history_urls:
-            past_orders = rb_client.order_history()
-        else:
-            history_urls = history_urls[0]
-            past_orders = RhWrapper.rh_pull_json_by_url(rb_client, history_urls.next_url)
+        past_orders = rb_client.order_history()
         orders.extend(past_orders["results"])
         print("{} order fetched".format(len(orders)))
-        while past_orders["next"]:
-            next_url = past_orders["next"]
+        next_url = past_orders["next"]
+        if robinhood_stock_order_history_next_urls.objects.filter(next_url=next_url):
+            return orders
+        while next_url:
             history_urls = robinhood_stock_order_history_next_urls()
             history_urls.next_url = next_url
             history_urls.save()
             past_orders = RhWrapper.rh_pull_json_by_url(rb_client, next_url)
             print("{} order fetched".format(len(orders)))
             orders.extend(past_orders["results"])
+            next_url = past_orders["next"]
         return orders
 
     @staticmethod
@@ -277,9 +289,9 @@ class RhWrapper():
         orders_saved_to_db = 0
         for order in past_orders_sorted:
             # check if order already in db
-            obj = robinhood_stock_order_history.objects.filter(timestamp=dateutil.parser.parse(order['last_transaction_at']))
-            if not obj:
-                if order['state'] == 'filled':
+            if order['state'] == 'filled':
+                obj = robinhood_stock_order_history.objects.filter(timestamp=dateutil.parser.parse(order['last_transaction_at']))
+                if not obj:
                     obj                 = robinhood_stock_order_history()
                     obj.order_type      = order['side']
                     obj.price           = order['average_price']
@@ -290,6 +302,6 @@ class RhWrapper():
                     obj.save()
                     orders_saved_to_db = orders_saved_to_db + 1
             else:
-                break
+                continue
 
         print ('orders_saved_to_db: ' + str(orders_saved_to_db))

@@ -45,34 +45,6 @@ def pages(request):
         return HttpResponse(html_template.render(context, request))
 
 def summary(request):
-    # currentDate = datetime.datetime.strptime(date.today().strftime("%Y-%m-%d"), "%Y-%m-%d")
-    # pastDate = currentDate - dateutil.relativedelta.relativedelta(days=91)
-    # # StockUtils.getHistoryData('SQ', pastDate, currentDate)
-    # my_shared = {
-    #     'SPY' :   14,
-    #     'JD'  :   40,
-    #     'NIO' :   450,
-    #     'BEP' :   73,
-    #     'BABA':   20,
-    #     'CMG' :   2,
-    #     'DIS' :   14,
-    #     'ROKU':   9,
-    #     'SHOP':   3,
-    #     'SPOT':   6,
-    #     'AMD' :   43,
-    #     'IRBT':   28,
-    #     'NVDA':   4,
-    #     'NFLX':   7,
-    #     'SBUX':   22,
-    #     'TSLA':   3,
-    #     'FB'  :   17,
-    #     'GOOG':   4,
-    #     'AMZN':   2,
-    #     'AAPL':   22,
-    #     'MSFT':   44
-    # }
-    # print (StockUtils.getHistoricValue(my_shared, pastDate))
-    # return render(request, 'summary.html')
     total_equity = 0
     stocks_equity = 0
     portfolio_cash = 0
@@ -98,7 +70,8 @@ def summary(request):
     RhWrapper.rh_pull_orders_history(user_id=username, passwd=password)
     RhWrapper.rh_pull_portfolio_data(user_id=username, passwd=password)
 
-    DbAccess.calc_pl_from_order_history()
+    # DbAccess.calc_pl_from_order_history()
+    DbAccess.process_all_orders()
     DbAccess.calc_my_stock_positions()
     DbAccess.calc_my_option_positions()
 
@@ -115,7 +88,7 @@ def summary(request):
     today_options_unrealized_pl = DbAccess.get_from_db('today_options_unrealized_pl')
     total_options_unrealized_pl = DbAccess.get_from_db('total_options_unrealized_pl')
 
-    DbAccess.set_to_db('options_equity', total_equity)
+    DbAccess.set_to_db('total_equity', total_equity)
     DbAccess.calc_portfolio_diversity(total_equity)
 
     portfolio_labels.append('stocks_equity')

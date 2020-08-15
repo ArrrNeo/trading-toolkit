@@ -6,48 +6,58 @@ import yfinance as yf
 import dateutil.parser
 import dateutil.relativedelta
 
-# db imports
-from app.models import stocks_history
-
 class StockUtils():
     @staticmethod
-    def getHistoryData(ticker, date_from, date_to):
-        if date_from > date_to:
-            return []
-        data = yf.download(ticker, date_from, date_to)
-        data['symbol'] = ticker
-        print (data)
-        df_records = data.to_dict('index')
-        print(df_records)
+    def getHistoryData(tickers, date_from, date_to):
+        return yf.download(tickers, date_from, date_to)
 
-        for key in df_records.keys():
-            obj = stocks_history.objects.filter(date=key).filter(symbol=df_records[key]['symbol'])
-            if not obj:
-                obj             = stocks_history()
-                obj.date        = key
-                obj.symbol      = df_records[key]['symbol']
-                obj.open_price  = df_records[key]['Open']
-                obj.high        = df_records[key]['High']
-                obj.low         = df_records[key]['Low']
-                obj.close_price = df_records[key]['Close']
-                obj.adj_price   = df_records[key]['Adj Close']
-                obj.volume      = df_records[key]['Volume']
-                obj.save()
+    @staticmethod
+    def get_nxt_mkt_day(curr_date, direction, history_data):
+        days = 0
+        delta = dateutil.relativedelta.relativedelta(days=1)
+        ret_date = curr_date + (direction * delta)
+        while True:
+            if StockUtils.is_market_holiday(ret_date, history_data):
+                ret_date = ret_date + (direction * delta)
+                days = days + 1
+            else:
+                break
+            if days >= 14:
+                print ("more than 2 weeks and prev day cannot be found")
+                ret_date = curr_date
+                break
+        return ret_date
 
-        return data
+    @staticmethod
+    def is_market_holiday(curr_date, history_data):
+        try:
+            data = history_data.loc[str(curr_date)]['Close']['AAPL']
+            return False
+        except Exception as e:
+            return True
 
     @staticmethod
     # will return the value of specifc mix of stocks at specified date
-    def getHistoricValue(portfolio, when):
+    def getHistoricValue(portfolio, when, history_data):
         value = 0
+        if not portfolio:
+            return 0
         for ticker in portfolio.keys():
-            data = yf.download(ticker, when, when + dateutil.relativedelta.relativedelta(days=1))
-            try:
-                value = value + (data['Open'].iloc[0] * portfolio[ticker])
-            except Exception as e:
-                print (e)
-                print ('failed for fetching: ' + ticker + ' for date: ' + str(when))
+            if not portfolio[ticker]['total_quantity']:
                 continue
+            # todo: check why does str(when) works and without str does not work
+            if str(history_data.loc[str(when)]['Close'][ticker]) == 'nan':
+                print (ticker + ' ' + str(when) + ' data not available in history_data (from yfinance.download)')
+                value = value + (portfolio[ticker]['average_price'] * portfolio[ticker]['total_quantity'])
+            else:
+                value = value + (history_data.loc[str(when)]['Close'][ticker] * portfolio[ticker]['total_quantity'])
+        return value
+
+    @staticmethod
+    # will return the value of specifc mix of stocks at specified date
+    def getUnRealizedProfitLoss(portfolio, when):
+        value = 0
+        # TBD
         return value
 
     @staticmethod
