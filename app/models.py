@@ -19,11 +19,7 @@ class portfolio_summary(models.Model):
     stocks_equity                = models.FloatField(default=0)                                             # processed
     options_equity               = models.FloatField(default=0)                                             # processed
     portfolio_cash               = models.FloatField(default=0)                                             # processed, sum of portfolio cash from all brokers
-    today_stocks_realized_pl     = models.FloatField(default=0)                                             # processed
-    total_stocks_realized_pl     = models.FloatField(default=0)                                             # processed
-    today_stocks_unrealized_pl   = models.FloatField(default=0)                                             # processes
     total_stocks_unrealized_pl   = models.FloatField(default=0)                                             # processes
-    today_options_unrealized_pl  = models.FloatField(default=0)                                             # processes
     total_options_unrealized_pl  = models.FloatField(default=0)                                             # processes
     total_equity                 = models.FloatField(default=0)                                             # processes
 

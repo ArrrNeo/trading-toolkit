@@ -49,11 +49,7 @@ def summary(request):
     stocks_equity = 0
     portfolio_cash = 0
     options_equity = 0
-    today_stocks_realized_pl = 0
-    total_stocks_realized_pl = 0
-    today_stocks_unrealized_pl = 0
     total_stocks_unrealized_pl = 0
-    today_options_unrealized_pl = 0
     total_options_unrealized_pl = 0
 
     stocks_data = []
@@ -67,11 +63,7 @@ def summary(request):
     username = open(current_dir + '/username.txt', 'r').read()
     password = open(current_dir + '/password.txt', 'r').read()
 
-    RhWrapper.rh_pull_orders_history(user_id=username, passwd=password)
     RhWrapper.rh_pull_portfolio_data(user_id=username, passwd=password)
-
-    # DbAccess.calc_pl_from_order_history()
-    DbAccess.process_all_orders()
     DbAccess.calc_my_stock_positions()
     DbAccess.calc_my_option_positions()
 
@@ -80,12 +72,7 @@ def summary(request):
     options_equity              = DbAccess.get_from_db('options_equity')
     total_equity                = stocks_equity + options_equity + portfolio_cash
 
-    today_stocks_realized_pl    = DbAccess.get_from_db('today_stocks_realized_pl')
-    total_stocks_realized_pl    = DbAccess.get_from_db('total_stocks_realized_pl')
-    today_stocks_unrealized_pl  = DbAccess.get_from_db('today_stocks_unrealized_pl')
     total_stocks_unrealized_pl  = DbAccess.get_from_db('total_stocks_unrealized_pl')
-
-    today_options_unrealized_pl = DbAccess.get_from_db('today_options_unrealized_pl')
     total_options_unrealized_pl = DbAccess.get_from_db('total_options_unrealized_pl')
 
     DbAccess.set_to_db('total_equity', total_equity)
@@ -122,16 +109,20 @@ def summary(request):
         'portfolio_data'               : portfolio_data,
         'options_equity'               : options_equity,
         'total_options_unrealized_pl'  : total_options_unrealized_pl,
-        'today_options_unrealized_pl'  : today_options_unrealized_pl,
         'stocks_equity'                : stocks_equity,
-        'today_stocks_realized_pl'     : today_stocks_realized_pl,
-        'total_stocks_realized_pl'     : total_stocks_realized_pl,
         'total_stocks_unrealized_pl'   : total_stocks_unrealized_pl,
-        'today_stocks_unrealized_pl'   : today_stocks_unrealized_pl,
         'margin_or_cash'               : portfolio_cash,
         'portfolio_value'              : total_equity,
     }
     return render(request, 'summary.html', data_for_template)
+
+def history(request):
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    username = open(current_dir + '/username.txt', 'r').read()
+    password = open(current_dir + '/password.txt', 'r').read()
+    RhWrapper.rh_pull_orders_history(user_id=username, passwd=password)
+    DbAccess.process_all_orders()
+    return render(request, 'history.html')
 
 def options(request):
     qset = options_held.objects.all()

@@ -38,13 +38,6 @@
                         <p class="text-success ml-0 mb-0 font-weight-small" style="font-family:courier;">total unrealized_pl: $ {{total_options_unrealized_pl | floatformat:2}}</p>
                       {% endif %}
                     </div>
-                    <div class="row">
-                      {% if today_options_unrealized_pl < 0 %}
-                        <p class="text-danger ml-0 mb-0 font-weight-small" style="font-family:courier;">today unrealized_pl: $ {{today_options_unrealized_pl | floatformat:2}}</p>
-                      {% else %}
-                        <p class="text-success ml-0 mb-0 font-weight-small" style="font-family:courier;">today unrealized_pl: $ {{today_options_unrealized_pl | floatformat:2}}</p>
-                      {% endif %}
-                    </div>
                   </div>
                 </div>
               </div>
@@ -68,20 +61,6 @@
                         <p class="text-danger ml-0 mb-0 font-weight-small" style="font-family:courier;">total unrealized_pl: $ {{total_stocks_unrealized_pl | floatformat:2}}</p>
                       {% else %}
                         <p class="text-success ml-0 mb-0 font-weight-small" style="font-family:courier;">total unrealized_pl: $ {{total_stocks_unrealized_pl | floatformat:2}}</p>
-                      {% endif %}
-                    </div>
-                    <div class="row">
-                      {% if today_stocks_unrealized_pl < 0 %}
-                        <p class="text-danger ml-0 mb-0 font-weight-small" style="font-family:courier;">today unrealized_pl: $ {{today_stocks_unrealized_pl | floatformat:2}}</p>
-                      {% else %}
-                        <p class="text-success ml-0 mb-0 font-weight-small" style="font-family:courier;">today unrealized_pl: $ {{today_stocks_unrealized_pl | floatformat:2}}</p>
-                      {% endif %}
-                    </div>
-                    <div class="row">
-                      {% if today_stocks_realized_pl < 0 %}
-                        <p class="text-danger ml-0 mb-0 font-weight-small" style="font-family:courier;">today __realized_pl: $ {{today_stocks_realized_pl | floatformat:2}}</p>
-                      {% else %}
-                        <p class="text-success ml-0 mb-0 font-weight-small" style="font-family:courier;">today __realized_pl: $ {{today_stocks_realized_pl | floatformat:2}}</p>
                       {% endif %}
                     </div>
                   </div>

@@ -3,7 +3,7 @@
 # misc imports
 # import pprint
 import os
-import csv
+import logging
 import datetime
 import dateutil.parser
 from operator import itemgetter
@@ -26,6 +26,9 @@ from app.models import robinhood_traded_stocks
 from app.models import robinhood_stock_order_history_next_urls
 from app.db_access import DbAccess
 from app.stock_utils import StockUtils
+
+LOG_FILENAME = 'debug.log'
+logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
 
 """
 stock position element
@@ -168,32 +171,6 @@ class RhWrapper():
     def rh_pull_portfolio_data(user_id, passwd):
         r.login(username=user_id, password=passwd)
 
-        # current_dir = os.path.dirname(os.path.realpath(__file__))
-        # stock_splits_csv = csv.reader(open(current_dir + '/stock_splits.csv', 'r'))
-        # for row in stock_splits_csv:
-        #     obj = robinhood_stock_split_events.objects.filter(symbol=row[0])
-        #     if not obj:
-        #         print ('adding new ticker to split table ' + str(row))
-        #         obj = robinhood_stock_split_events()
-        #         obj.symbol = row[0]
-        #         obj.date = datetime.datetime.strptime(row[1], "%Y-%m-%d").date()
-        #         obj.ratio = float(row[2])
-        #         obj.new_symbol = row[3]
-        #         obj.save()
-
-        # for now processing all orders from beginning, so re-init split everytime
-        robinhood_stock_split_events.objects.all().delete()
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        stock_splits_csv = csv.reader(open(current_dir + '/stock_splits.csv', 'r'))
-        for row in stock_splits_csv:
-            print ('adding new ticker to split table ' + str(row))
-            obj = robinhood_stock_split_events()
-            obj.symbol = row[0]
-            obj.date = datetime.datetime.strptime(row[1], "%Y-%m-%d").date()
-            obj.ratio = float(row[2])
-            obj.new_symbol = row[3]
-            obj.save()
-
         if DbAccess.is_update_needed():
             obj = portfolio_summary.objects.all()
             if not obj:
@@ -204,6 +181,9 @@ class RhWrapper():
             obj.portfolio_cash  = float(profiles.load_account_profile()['portfolio_cash'])
             obj.save()
 
+            # todo: do not delete current entries, just update db.
+            # todo: if a stock is sold completely, remove that entry.
+            # todo: this will maintain previous avg
             # remove current entries
             stocks_held.objects.all().delete()
             # get current owned securites and save to db
@@ -222,7 +202,7 @@ class RhWrapper():
                 try:
                     obj.prev_close_price    = float(StockUtils.getStockInfo(obj.symbol)['previousClose'])
                 except Exception as e:
-                    print (str(e) + ' encountered when fetching yahoo data for ' + obj.symbol)
+                    logging.debug(str(e) + ' encountered when fetching yahoo data for ' + obj.symbol)
                     obj.prev_close_price = obj.open_price
                 obj.save()
 
@@ -265,7 +245,7 @@ class RhWrapper():
         orders = []
         past_orders = rb_client.order_history()
         orders.extend(past_orders["results"])
-        print("{} order fetched".format(len(orders)))
+        logging.debug("{} order fetched".format(len(orders)))
         next_url = past_orders["next"]
         if robinhood_stock_order_history_next_urls.objects.filter(next_url=next_url):
             return orders
@@ -274,7 +254,7 @@ class RhWrapper():
             history_urls.next_url = next_url
             history_urls.save()
             past_orders = RhWrapper.rh_pull_json_by_url(rb_client, next_url)
-            print("{} order fetched".format(len(orders)))
+            logging.debug("{} order fetched".format(len(orders)))
             orders.extend(past_orders["results"])
             next_url = past_orders["next"]
         return orders
@@ -303,5 +283,4 @@ class RhWrapper():
                     orders_saved_to_db = orders_saved_to_db + 1
             else:
                 continue
-
-        print ('orders_saved_to_db: ' + str(orders_saved_to_db))
+        logging.debug('orders_saved_to_db: ' + str(orders_saved_to_db))

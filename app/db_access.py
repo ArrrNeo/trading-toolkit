@@ -2,6 +2,9 @@
 
 # misc imports
 # import pprint
+import os
+import csv
+import logging
 import datetime
 from django.utils import timezone
 from app.stock_utils import StockUtils
@@ -18,6 +21,8 @@ from app.models import robinhood_stock_order_history_next_urls
 
 #refresh time in minutes
 REFRESH_TIME = 15
+LOG_FILENAME = 'debug.log'
+logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
 
 class DbAccess():
     ############################################################################################################
@@ -55,7 +60,6 @@ class DbAccess():
             today_unrealized_pl      = today_unrealized_pl + item.pp_today_unrealized_pl
 
         summary.stocks_equity              = equity_total
-        summary.today_stocks_unrealized_pl = today_unrealized_pl
         summary.total_stocks_unrealized_pl = total_unrealized_pl
         summary.save()
 
@@ -88,7 +92,6 @@ class DbAccess():
             today_unrealized_pl        = today_unrealized_pl + item.pp_today_unrealized_pl
 
         summary.options_equity              = equity_total
-        summary.today_options_unrealized_pl = today_unrealized_pl
         summary.total_options_unrealized_pl = total_unrealized_pl
         summary.save()
 
@@ -114,8 +117,10 @@ class DbAccess():
     def process_all_orders():
         portfolio = {}
         stock_daily_table = []
-        total_stocks_realized_pl = 0
         delta = datetime.timedelta(days=1)
+
+        # init split history
+        DbAccess.populate_split_history()
 
         orders = robinhood_stock_order_history.objects.all().order_by('timestamp')
         order_list = list(orders.values())
@@ -129,11 +134,7 @@ class DbAccess():
                 curr_date += delta
                 continue
             idx = DbAccess.process_day_orders(idx, curr_date, portfolio, order_list, stock_daily_table, history_data)
-            total_stocks_realized_pl = total_stocks_realized_pl + stock_daily_table[-1]['day_realized_pl']
             curr_date += delta
-
-        DbAccess.set_to_db('total_stocks_realized_pl', total_stocks_realized_pl)
-        DbAccess.set_to_db('today_stocks_realized_pl', stock_daily_table[-1]['day_realized_pl'])
 
         for key in portfolio.keys():
             obj = robinhood_traded_stocks.objects.filter(symbol=key)[0]
@@ -204,7 +205,7 @@ class DbAccess():
         if order['timestamp'].date() < split_event.date:
             return
 
-        print ('processing split old: ' + split_event.symbol + ' new: ' + split_event.new_symbol)
+        logging.debug('processing split old: ' + split_event.symbol + ' new: ' + split_event.new_symbol)
 
         split_event.processed = True
         split_event.save()
@@ -245,7 +246,7 @@ class DbAccess():
         # order was sell
         change = order['shares'] * order['price']
         if order['symbol'] not in portfolio:
-            print (order['symbol'] + ': sell without buy, check order history. fix for BEPC.')
+            logging.debug(order['symbol'] + ': sell without buy, check order history. fix for BEPC.')
             realized_profit_loss = change
         else:
             if portfolio[order['symbol']]['total_quantity'] == 0:
@@ -298,16 +299,8 @@ class DbAccess():
             return obj[0].options_equity
         if x == 'portfolio_cash':
             return obj[0].portfolio_cash
-        if x == 'today_stocks_realized_pl':
-            return obj[0].today_stocks_realized_pl
-        if x == 'total_stocks_realized_pl':
-            return obj[0].total_stocks_realized_pl
-        if x == 'today_stocks_unrealized_pl':
-            return obj[0].today_stocks_unrealized_pl
         if x == 'total_stocks_unrealized_pl':
             return obj[0].total_stocks_unrealized_pl
-        if x == 'today_options_unrealized_pl':
-            return obj[0].today_options_unrealized_pl
         if x == 'total_options_unrealized_pl':
             return obj[0].total_options_unrealized_pl
         if x == 'total_equity':
@@ -324,18 +317,25 @@ class DbAccess():
             obj[0].options_equity = val
         if x == 'portfolio_cash':
             obj[0].portfolio_cash = val
-        if x == 'today_stocks_realized_pl':
-            obj[0].today_stocks_realized_pl = val
-        if x == 'total_stocks_realized_pl':
-            obj[0].total_stocks_realized_pl = val
-        if x == 'today_stocks_unrealized_pl':
-            obj[0].today_stocks_unrealized_pl = val
         if x == 'total_stocks_unrealized_pl':
             obj[0].total_stocks_unrealized_pl = val
-        if x == 'today_options_unrealized_pl':
-            obj[0].today_options_unrealized_pl = val
         if x == 'total_options_unrealized_pl':
             obj[0].total_options_unrealized_pl = val
         if x == 'total_equity':
             obj[0].total_equity = val
         obj[0].save()
+
+    @staticmethod
+    def populate_split_history():
+        # for now processing all orders from beginning, so re-init split history everytime
+        robinhood_stock_split_events.objects.all().delete()
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        stock_splits_csv = csv.reader(open(current_dir + '/stock_splits.csv', 'r'))
+        for row in stock_splits_csv:
+            logging.debug('adding new ticker to split table ' + str(row))
+            obj = robinhood_stock_split_events()
+            obj.symbol = row[0]
+            obj.date = datetime.datetime.strptime(row[1], "%Y-%m-%d").date()
+            obj.ratio = float(row[2])
+            obj.new_symbol = row[3]
+            obj.save()

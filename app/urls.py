@@ -20,4 +20,5 @@ urlpatterns = [
     path('options/', views.options, name='options'),
     path('stocks/', views.stocks, name='stocks'),
     path('options_chart/', views.options_chart, name='options_chart'),
+    path('history/', views.history, name='history'),
 ]
