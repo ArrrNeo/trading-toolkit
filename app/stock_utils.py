@@ -7,8 +7,8 @@ import yfinance as yf
 import dateutil.parser
 import dateutil.relativedelta
 
-LOG_FILENAME = 'debug.log'
-logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
+LOG_FILENAME = 'error.log'
+logging.basicConfig(filename=LOG_FILENAME,level=logging.ERROR)
 
 class StockUtils():
     @staticmethod
@@ -27,7 +27,7 @@ class StockUtils():
             else:
                 break
             if days >= 14:
-                logging.debug("more than 2 weeks and prev day cannot be found")
+                logging.error("more than 2 weeks and prev day cannot be found")
                 ret_date = curr_date
                 break
         return ret_date
@@ -51,7 +51,7 @@ class StockUtils():
                 continue
             # todo: check why does str(when) works and without str does not work
             if str(history_data.loc[str(when)]['Close'][ticker]) == 'nan':
-                logging.debug(ticker + ' ' + str(when) + ' data not available in history_data (from yfinance.download)')
+                logging.error(ticker + ' ' + str(when) + ' data not available in history_data (from yfinance.download)')
                 value = value + (portfolio[ticker]['average_price'] * portfolio[ticker]['total_quantity'])
             else:
                 value = value + (history_data.loc[str(when)]['Close'][ticker] * portfolio[ticker]['total_quantity'])

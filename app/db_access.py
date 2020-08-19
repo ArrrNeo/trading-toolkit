@@ -4,6 +4,7 @@
 # import pprint
 import os
 import csv
+import json
 import logging
 import datetime
 from django.utils import timezone
@@ -21,8 +22,9 @@ from app.models import robinhood_stock_order_history_next_urls
 
 #refresh time in minutes
 REFRESH_TIME = 15
-LOG_FILENAME = 'debug.log'
-logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
+
+LOG_FILENAME = 'error.log'
+logging.basicConfig(filename=LOG_FILENAME,level=logging.ERROR)
 
 class DbAccess():
     ############################################################################################################
@@ -119,11 +121,28 @@ class DbAccess():
         stock_daily_table = []
         delta = datetime.timedelta(days=1)
 
-        # init split history
-        DbAccess.populate_split_history()
-
-        orders = robinhood_stock_order_history.objects.all().order_by('timestamp')
+        # only process un-processed entries
+        orders = robinhood_stock_order_history.objects.filter(processed=False).order_by('timestamp')
         order_list = list(orders.values())
+        if not order_list:
+            return
+
+        DbAccess.populate_split_history()
+        # init portfolio from stock_daily_db_table
+        obj = stock_daily_db_table.objects.order_by('-id')
+        if obj:
+            # convert str to dict
+            portfolio = json.loads(obj[0].portfolio_end)
+            last_day_entry                    = {}
+            last_day_entry['date']            = obj[0].date
+            last_day_entry['day_pl']          = obj[0].day_pl
+            last_day_entry['portfolio_end']   = obj[0].portfolio_end
+            last_day_entry['equity_at_close'] = obj[0].equity_at_close
+            last_day_entry['day_realized_pl'] = obj[0].day_realized_pl
+            stock_daily_table.append(last_day_entry)
+
+        # bulk update processed=True in all entries of orders
+        orders.update(processed=True)
         curr_date = order_list[0]['timestamp'].date()
         end_date = order_list[-1]['timestamp'].date()
         idx = 0
@@ -137,28 +156,33 @@ class DbAccess():
             curr_date += delta
 
         for key in portfolio.keys():
+            # symbol must be preset (run portfolio summary page before this)
+            # todo: create stocks_held table from here rather than fetch from robinhood
             obj = robinhood_traded_stocks.objects.filter(symbol=key)[0]
             obj.pp_average_price = portfolio[key]['average_price']
             obj.save()
 
         django_list = [stock_daily_db_table(**vals) for vals in stock_daily_table]
-        stock_daily_db_table.objects.bulk_create(django_list)
+        stock_daily_db_table.objects.bulk_create(django_list, ignore_conflicts=True)
 
         # todo: make sure final portfolio matches rh_fetched_portfolio.
 
     @staticmethod
     def process_day_orders(idx, curr_date, portfolio, order_list, stock_daily_table, history_data):
-        day_entry = {}
+        day_pl = 0
         day_change = 0
         day_realized_pl = 0
+        update_last_day = False     # indicate if curr_date is partially processed and update to same is needed
+        equity_at_prev_close = 0
 
         try:
-            equity_at_prev_close = stock_daily_table[-1][equity_at_close]
+            # check if curr_date iss partially processed, which is the
+            # case if curr_date = last date in stock_daily_db_table
+            if curr_date == stock_daily_table[-1]['date']:
+                update_last_day = True
+            equity_at_prev_close = stock_daily_table[-1]['equity_at_close']
         except Exception as e:
-            equity_at_prev_close = 0
-        day_entry['date'] = curr_date
-        # following will be used later when calculating stocks traded in given period
-        # day_entry['portfolio_start'] = portfolio
+            pass
         while idx < len(order_list):
             if order_list[idx]['timestamp'].date() == curr_date:
                 order_change, order_realized_pl = DbAccess.process_single_order(portfolio, order_list[idx])
@@ -171,12 +195,21 @@ class DbAccess():
         # calcaulate equity_at_close
         equity_at_close = StockUtils.getHistoricValue(portfolio, curr_date, history_data)
         day_pl = equity_at_close - equity_at_prev_close + day_change
-        day_entry['equity_at_close'] = equity_at_close
-        # following will be used later when calculating stocks traded in given period
-        # day_entry['portfolio_end']   = portfolio
-        day_entry['day_pl']          = day_pl
-        day_entry['day_realized_pl'] = day_realized_pl
-        stock_daily_table.append(day_entry)
+        if update_last_day:
+            day_entry                    = stock_daily_table[-1]
+            day_entry['date']            = curr_date
+            day_entry['equity_at_close'] = equity_at_close
+            day_entry['portfolio_end']   = json.dumps(portfolio)
+            day_entry['day_pl']          = day_entry['day_pl'] + day_pl
+            day_entry['day_realized_pl'] = day_entry['day_realized_pl'] + day_realized_pl
+        else:
+            day_entry                    = {}
+            day_entry['date']            = curr_date
+            day_entry['equity_at_close'] = equity_at_close
+            day_entry['portfolio_end']   = json.dumps(portfolio)
+            day_entry['day_pl']          = day_pl
+            day_entry['day_realized_pl'] = day_realized_pl
+            stock_daily_table.append(day_entry)
         # delete enrties with 0 shares
         zero_stocks = [x for x in portfolio.keys() if portfolio[x]['total_quantity'] == 0]
         for ticker in zero_stocks:
@@ -205,7 +238,7 @@ class DbAccess():
         if order['timestamp'].date() < split_event.date:
             return
 
-        logging.debug('processing split old: ' + split_event.symbol + ' new: ' + split_event.new_symbol)
+        logging.error('processing split old: ' + split_event.symbol + ' new: ' + split_event.new_symbol)
 
         split_event.processed = True
         split_event.save()
@@ -246,7 +279,7 @@ class DbAccess():
         # order was sell
         change = order['shares'] * order['price']
         if order['symbol'] not in portfolio:
-            logging.debug(order['symbol'] + ': sell without buy, check order history. fix for BEPC.')
+            logging.error(order['symbol'] + ': sell without buy, check order history. fix for BEPC.')
             realized_profit_loss = change
         else:
             if portfolio[order['symbol']]['total_quantity'] == 0:
@@ -327,15 +360,16 @@ class DbAccess():
 
     @staticmethod
     def populate_split_history():
-        # for now processing all orders from beginning, so re-init split history everytime
-        robinhood_stock_split_events.objects.all().delete()
+        # only add new entries
         current_dir = os.path.dirname(os.path.realpath(__file__))
         stock_splits_csv = csv.reader(open(current_dir + '/stock_splits.csv', 'r'))
         for row in stock_splits_csv:
-            logging.debug('adding new ticker to split table ' + str(row))
-            obj = robinhood_stock_split_events()
-            obj.symbol = row[0]
-            obj.date = datetime.datetime.strptime(row[1], "%Y-%m-%d").date()
-            obj.ratio = float(row[2])
-            obj.new_symbol = row[3]
-            obj.save()
+            obj = robinhood_stock_split_events.objects.filter(symbol=row[0])
+            if not obj:
+                logging.error('adding new ticker to split table ' + str(row))
+                obj = robinhood_stock_split_events()
+                obj.symbol = row[0]
+                obj.date = datetime.datetime.strptime(row[1], "%Y-%m-%d").date()
+                obj.ratio = float(row[2])
+                obj.new_symbol = row[3]
+                obj.save()

@@ -27,8 +27,8 @@ from app.models import robinhood_stock_order_history_next_urls
 from app.db_access import DbAccess
 from app.stock_utils import StockUtils
 
-LOG_FILENAME = 'debug.log'
-logging.basicConfig(filename=LOG_FILENAME,level=logging.DEBUG)
+LOG_FILENAME = 'error.log'
+logging.basicConfig(filename=LOG_FILENAME,level=logging.ERROR)
 
 """
 stock position element
@@ -181,9 +181,6 @@ class RhWrapper():
             obj.portfolio_cash  = float(profiles.load_account_profile()['portfolio_cash'])
             obj.save()
 
-            # todo: do not delete current entries, just update db.
-            # todo: if a stock is sold completely, remove that entry.
-            # todo: this will maintain previous avg
             # remove current entries
             stocks_held.objects.all().delete()
             # get current owned securites and save to db
@@ -202,7 +199,7 @@ class RhWrapper():
                 try:
                     obj.prev_close_price    = float(StockUtils.getStockInfo(obj.symbol)['previousClose'])
                 except Exception as e:
-                    logging.debug(str(e) + ' encountered when fetching yahoo data for ' + obj.symbol)
+                    logging.error(str(e) + ' encountered when fetching yahoo data for ' + obj.symbol)
                     obj.prev_close_price = obj.open_price
                 obj.save()
 
@@ -245,7 +242,7 @@ class RhWrapper():
         orders = []
         past_orders = rb_client.order_history()
         orders.extend(past_orders["results"])
-        logging.debug("{} order fetched".format(len(orders)))
+        logging.error("{} order fetched".format(len(orders)))
         next_url = past_orders["next"]
         if robinhood_stock_order_history_next_urls.objects.filter(next_url=next_url):
             return orders
@@ -254,7 +251,7 @@ class RhWrapper():
             history_urls.next_url = next_url
             history_urls.save()
             past_orders = RhWrapper.rh_pull_json_by_url(rb_client, next_url)
-            logging.debug("{} order fetched".format(len(orders)))
+            logging.error("{} order fetched".format(len(orders)))
             orders.extend(past_orders["results"])
             next_url = past_orders["next"]
         return orders
@@ -283,4 +280,4 @@ class RhWrapper():
                     orders_saved_to_db = orders_saved_to_db + 1
             else:
                 continue
-        logging.debug('orders_saved_to_db: ' + str(orders_saved_to_db))
+        logging.error('orders_saved_to_db: ' + str(orders_saved_to_db))

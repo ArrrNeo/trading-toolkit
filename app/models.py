@@ -8,10 +8,11 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class stock_daily_db_table(models.Model):
-    date                         = models.DateField()
-    day_pl                       = models.FloatField(default=0)
-    equity_at_close              = models.FloatField(default=0)
-    day_realized_pl              = models.FloatField(default=0)
+    date                         = models.DateField(unique=True)
+    day_pl                       = models.FloatField()
+    equity_at_close              = models.FloatField()
+    day_realized_pl              = models.FloatField()
+    portfolio_end                = models.CharField(max_length=1000)
 
 # Create your models here.
 class portfolio_summary(models.Model):
@@ -89,3 +90,4 @@ class robinhood_stock_order_history(models.Model):
     shares                 = models.FloatField()                                                            # raw
     price                  = models.FloatField()                                                            # raw
     timestamp              = models.DateTimeField()                                                         # raw
+    processed              = models.BooleanField(default=False)                                             # processed

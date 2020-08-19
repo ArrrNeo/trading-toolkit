@@ -9,17 +9,62 @@
 {% endblock stylesheets %}
 
 {% block content %}
-
+<form action="/history/" method="POST">
+  <input type="submit" value="submit" name='submit'>
+  {% csrf_token %}
+  <div class="content-wrapper">
+    <div class="row stretch-card">
+      <div class="card">
+        <div class="card-body">
+          <div id="chartContainer" style="height: 500px; width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
 {% endblock content %}
 
 {% block plugin_javascripts %}
+
+<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
 
 {% endblock plugin_javascripts %}
 
 {% block javascripts %}
 
 <script>
-
+  chart_data = [
+    {
+      type: "rangeColumn",
+      yValueFormatString: "$#,##0.00",
+      xValueFormatString: "DDD MMM YYYY",
+      toolTipContent: "{y[1]}",
+      color: 'rgb(90, 220, 0)',
+      dataPoints: []
+    },
+    {
+      type: "rangeColumn",
+      yValueFormatString: "$#,##0.00",
+      xValueFormatString: "DDD MMM YYYY",
+      toolTipContent: "{y[1]}",
+      color: 'rgb(170, 0, 0)',
+      dataPoints: []
+    },
+  ];
+  window.onload = function ()
+  {
+    var dates = {{dates | safe}}
+    var days_pl = {{days_pl | safe}}
+    var chart = new CanvasJS.Chart("chartContainer", { theme: "dark1", animationEnabled: true, title: {text: "last 30 days PL"}, axisY: {title: "USD", prefix: "$" }, data: chart_data});
+    for (idx = 0; idx < days_pl.length; ++idx) {
+      if (days_pl[idx] >= 0) {
+        chart.options.data[0].dataPoints.push({ x: new Date(dates[idx]), y: [0, days_pl[idx]] });
+      } else {
+        chart.options.data[1].dataPoints.push({ x: new Date(dates[idx]), y: [0, days_pl[idx]] });
+      }
+    }
+    chart.render();
+  }
 </script>
 
 {% endblock javascripts %}

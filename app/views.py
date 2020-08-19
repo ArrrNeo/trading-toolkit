@@ -13,7 +13,7 @@ from django.http import JsonResponse
 from app.rh_wrapper import RhWrapper
 from app.db_access import DbAccess
 from app.stock_utils import StockUtils
-from app.models import options_held, stocks_held
+from app.models import options_held, stocks_held, stock_daily_db_table
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from heapq import nsmallest
@@ -117,12 +117,18 @@ def summary(request):
     return render(request, 'summary.html', data_for_template)
 
 def history(request):
+    ctx = {}
     current_dir = os.path.dirname(os.path.realpath(__file__))
     username = open(current_dir + '/username.txt', 'r').read()
     password = open(current_dir + '/password.txt', 'r').read()
     RhWrapper.rh_pull_orders_history(user_id=username, passwd=password)
     DbAccess.process_all_orders()
-    return render(request, 'history.html')
+
+    qset = stock_daily_db_table.objects.all().order_by('-date')[:20]
+    ctx['dates']   = [str(x.date) for x in qset]
+    ctx['days_pl'] = [x.day_pl for x in qset]
+
+    return render(request, 'history.html', ctx)
 
 def options(request):
     qset = options_held.objects.all()
