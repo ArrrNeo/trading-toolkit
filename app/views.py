@@ -200,7 +200,7 @@ def debit_spread_chart(request):
             # entry['trade'] = 'buy: ' + str(entry['long_strike']) + 'c, sell: ' + str(entry['short_strike']) + 'c'
             if entry['premium'] == 0:
                 continue
-            entry['itm_percent'] = ((ctx['curr_price'] - (entry['long_strike'] + entry['premium'])) / ctx['curr_price']) * 100
+            entry['distance_from_breakeven'] = ((ctx['curr_price'] - (entry['long_strike'] + entry['premium'])) / ctx['curr_price']) * 100
             entry['max_profit_pc'] = (entry['max_profit'] / entry['premium']) * 100
             if entry['max_profit_pc'] <= min_profit_pc:
                 continue
@@ -212,7 +212,7 @@ def debit_spread_chart(request):
     ctx['max_profit_pc'] = [x['max_profit_pc'] for x in calculations]
     ctx['long_strike'] = [x['long_strike'] for x in calculations]
     ctx['short_strike'] = [x['short_strike'] for x in calculations]
-    ctx['itm_percent'] = [x['itm_percent'] for x in calculations]
+    ctx['distance_from_breakeven'] = [x['distance_from_breakeven'] for x in calculations]
     ctx['x_axis_chart_2'] = 'long_strike'
     ctx['y_axis_chart_2'] = 'max_profit_percent'
     # for entry in calculations:

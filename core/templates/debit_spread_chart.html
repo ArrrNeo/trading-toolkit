@@ -49,7 +49,7 @@
   var scatter_data =
   [{
     type: "scatter",
-    toolTipContent: "premium: $ {a}<br/>short_strike: $ {b}<br/>max_profit: $ {c}<br/>max_profit %: {y}<br/>itm %: {d}",
+    toolTipContent: "premium: $ {a}<br/>short_strike: $ {b}<br/>max_profit: $ {c}<br/>max_profit %: {y}<br/>distance_from_breakeven %: {d}",
     dataPoints: []
   },
   {
@@ -91,13 +91,13 @@
   }
 
   window.onload = function () {
-    var curr_price = {{curr_price | safe}};
     var premium = {{premium | safe}};
+    var curr_price = {{curr_price | safe}};
     var max_profit = {{max_profit | safe}};
-    var max_profit_pc = {{max_profit_pc | safe}};
     var long_strike = {{long_strike | safe}};
     var short_strike = {{short_strike | safe}};
-    var itm_percent = {{itm_percent | safe}};
+    var max_profit_pc = {{max_profit_pc | safe}};
+    var distance_from_breakeven = {{distance_from_breakeven | safe}};
     var x_axis_label = "{{x_axis_chart_2}}";
     var y_axis_label = "{{y_axis_chart_2}}";
     {% if log_scale %}
@@ -120,13 +120,13 @@
     var max = max_profit_pc[0];
     for (index = 0; index < premium.length; ++index) {
       chart2.options.data[0].dataPoints.push({
-                                                color : itm_color(itm_percent[index]),
                                                 x     : long_strike[index],
                                                 y     : max_profit_pc[index],
                                                 a     : premium[index],
                                                 b     : short_strike[index],
                                                 c     : max_profit[index],
-                                                d     : itm_percent[index]
+                                                d     : distance_from_breakeven[index],
+                                                color : itm_color(distance_from_breakeven[index])
                                               });
       if (max_profit_pc[index] <= min) {
         min = max_profit_pc[index];
