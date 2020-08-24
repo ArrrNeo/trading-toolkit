@@ -1,0 +1,170 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %} Summary {% endblock %}
+<!-- Specific Plugin CSS goes HERE -->
+{% block plugin_stylesheets %}{% endblock plugin_stylesheets %}
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}{% endblock stylesheets %}
+{% block content %}
+
+<form action="/covered_calls_chart/" method="POST">
+  <label for="min_stock_price">min_stock_price: </label>
+  <input id="min_stock_price" type="text" name="min_stock_price" value="{{ min_stock_price }}">
+  <label for="max_stock_price">max_stock_price: </label>
+  <input id="max_stock_price" type="text" name="max_stock_price" value="{{ max_stock_price }}">
+  <label for="min_itm_pc">min_itm_pc: </label>
+  <input id="min_itm_pc" type="text" name="min_itm_pc" value="{{ min_itm_pc }}">
+  <label for="max_itm_pc">max_itm_pc: </label>
+  <input id="max_itm_pc" type="text" name="max_itm_pc" value="{{ max_itm_pc }}">
+  <label for="min_max_profit_pc">min_max_profit_pc: </label>
+  <input id="min_max_profit_pc" type="text" name="min_max_profit_pc" value="{{ min_max_profit_pc }}">
+  <label for="max_days_to_exp">max_days_to_exp: </label>
+  <input id="max_days_to_exp" type="text" name="max_days_to_exp" value="{{ max_days_to_exp }}">
+  <input type="submit" value="submit" name='submit'>
+  {% csrf_token %}
+  <!-- {{ form }} -->
+  <!-- commenting graph part right now -->
+  <!-- <div class="content-wrapper">
+    <h4">ticker: {{ticker}}</h4>
+    <br/>
+    <h4">Exp: {{date}}</h4>
+    <br/>
+    <h4">Number for Strikes: {{num_strikes}}</h4>
+    <br/>
+    <h4">Current Price: $ {{curr_price}}</h4>
+    <div class="row stretch-card">
+      <div class="card">
+        <div class="card-body">
+          <h4 class="card-title">Line chart</h4>
+          <div id="chartContainer" style="height: 500px; width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+  </div> -->
+
+  <div class="content-wrapper">
+    <div class="row">
+      <div class="col-lg-12 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th> symbol </th>
+                    <th> curr_price </th>
+                    <th> call_price </th>
+                    <th> strike </th>
+                    <th> exp_date </th>
+                    <th> effective_cost </th>
+                    <th> max_profit </th>
+                    <th> max_profit_pc </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in table %}
+                    <tr>
+                      <td> {{ row.symbol }} </td>
+                      <td> {{ row.curr_price | floatformat:2 }} </td>
+                      <td> {{ row.call_price | floatformat:2 }} </td>
+                      <td> {{ row.strike | floatformat:2 }} </td>
+                      <td> {{ row.exp_date }} </td>
+                      <td> {{ row.effective_cost | floatformat:2 }} </td>
+                      <td> {{ row.max_profit | floatformat:2 }} </td>
+                      <td> {{ row.max_profit_pc | floatformat:2 }} % </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</form>
+
+{% endblock content %}
+{% block plugin_javascripts %}
+<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+{% endblock plugin_javascripts %}
+{% block javascripts %}
+<!-- <script>
+  var scatter_data =
+  [{
+    type: "scatter",
+    toolTipContent: "premium: $ {a}<br/>short_strike: $ {b}<br/>max_profit: $ {c}<br/>max_profit %: {y}<br/>distance_from_breakeven %: {d}",
+    dataPoints: []
+  }];
+
+  function itm_color(itm_pc) {
+    // following is the color scheme
+    // c4fcc5 0 to 1      fac8c6    0 to -1
+    // 95fa98 1 to 2      f69c99   -1 to -2
+    // 37f63d 2 to 3      f3706b   -2 to -3
+    // 07c40d 3 to 4      ef443e   -3 to -4
+    // 06950a 4 to 5      ea1a12   -4 to -5
+    // 046507 5 +         bc150f   -5 -
+    var colors = [
+      "#bc150f",
+      "#ea1a12",
+      "#ef443e",
+      "#f3706b",
+      "#f69c99",
+      "#fac8c6",
+      "#c4fcc5",
+      "#95fa98",
+      "#37f63d",
+      "#07c40d",
+      "#06950a",
+      "#046507",
+    ];
+    itm_pc = Math.floor(itm_pc + 6);
+    if (itm_pc < 0) {
+      itm_pc = 0;
+    }
+    if (itm_pc > 11) {
+      itm_pc = 11;
+    }
+    return colors[itm_pc];
+  }
+
+  window.onload = function () {
+    var x_axis = "{{x_axis}}";
+    var y_axis = "{{y_axis}}";
+    var symbol = {{ symbol | safe}};
+    var strike = {{ strike | safe}};
+    var exp_date = {{ exp_date | safe}};
+    var max_profit = {{ max_profit | safe}};
+    var call_price = {{ call_price | safe}};
+    var curr_price = {{ curr_price | safe}};
+    var max_profit_pc = {{ max_profit_pc | safe}};
+    var effective_cost = {{ effective_cost | safe}};
+
+    var chart = new CanvasJS.Chart("chartContainer",
+                                   {
+                                     animationEnabled : false,
+                                     theme            : "light2",
+                                     axisX            : [{title: x_axis}],
+                                     axisY            : [{title: y_axis}],
+                                     title            : {text: "Covered Call vs Max Profit %"},
+                                     data             : scatter_data
+                                   }
+                                  );
+    var idx;
+    for (idx = 0; idx < premium.length; ++idx) {
+      chart.options.data[0].dataPoints.push({
+                                                label : symbol[idx],
+                                                y     : max_profit_pc[idx]
+                                                a     : premium[idx],
+                                                b     : short_strike[idx],
+                                                c     : max_profit[idx],
+                                                d     : distance_from_breakeven[idx],
+                                                color : itm_color(distance_from_breakeven[idx])
+                                              });
+    }
+    chart.render();
+  }
+</script> -->
+{% endblock javascripts %}
