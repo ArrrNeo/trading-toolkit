@@ -56,12 +56,15 @@ class CoveredCalls:
                 if (dtt - dateutil.relativedelta.relativedelta(days=self.MAX_DAYS_TO_EXP)) > currentDate:
                     continue
                 try:
-                    option_chains = obj.option_chain(dt).calls[['strike', 'lastPrice', 'volume', 'openInterest', 'impliedVolatility', 'inTheMoney']]
+                    option_chains = obj.option_chain(dt).calls[['strike', 'lastPrice', 'bid', 'ask', 'volume', 'openInterest', 'impliedVolatility', 'inTheMoney']]
                     # only consider in the money options
                     option_chains = option_chains[option_chains['inTheMoney'] == True]
                     for index, row in option_chains.iterrows():
+                        call_price = row['lastPrice']
                         itm_percent = ((stock_curr_price - row['strike']) / row['strike']) * 100
-                        effective_cost = stock_curr_price - row['lastPrice']
+                        if row['bid'] != 0 or row['ask'] != 0:
+                            call_price = (row['bid'] + row['ask']) / 2
+                        effective_cost = stock_curr_price - call_price
                         max_profit = row['strike'] - effective_cost
                         max_profit_pc = (max_profit / effective_cost) *  100
                         # filter based on in the money percentage
@@ -78,7 +81,7 @@ class CoveredCalls:
                         entry['exp_date'] = dt
                         entry['strike'] = row['strike']
                         entry['max_profit'] = max_profit
-                        entry['call_price'] = row['lastPrice']
+                        entry['call_price'] = call_price
                         entry['curr_price'] = stock_curr_price
                         entry['max_profit_pc'] = max_profit_pc
                         entry['effective_cost'] = effective_cost

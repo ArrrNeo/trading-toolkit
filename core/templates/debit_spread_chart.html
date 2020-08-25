@@ -91,43 +91,43 @@
   }
 
   window.onload = function () {
-    var premium = {{premium | safe}};
-    var curr_price = {{curr_price | safe}};
-    var max_profit = {{max_profit | safe}};
-    var long_strike = {{long_strike | safe}};
-    var short_strike = {{short_strike | safe}};
-    var max_profit_pc = {{max_profit_pc | safe}};
+    var x_axis_label            = "{{x_axis}}";
+    var y_axis_label            = "{{y_axis}}";
+    var premium                 = {{premium                 | safe}};
+    var curr_price              = {{curr_price              | safe}};
+    var max_profit              = {{max_profit              | safe}};
+    var long_strike             = {{long_strike             | safe}};
+    var short_strike            = {{short_strike            | safe}};
+    var max_profit_pc           = {{max_profit_pc           | safe}};
     var distance_from_breakeven = {{distance_from_breakeven | safe}};
-    var x_axis_label = "{{x_axis}}";
-    var y_axis_label = "{{y_axis}}";
     {% if log_scale %}
       var logScale = true;
     {% else %}
       var logScale = false;
     {% endif %}
-    var chart2 = new CanvasJS.Chart("chartContainer",
-                                    {
-                                      animationEnabled : false,
-                                      theme            : "light2",
-                                      axisX            : [{title: x_axis_label}],
-                                      axisY            : [{logarithmic: logScale, title: y_axis_label}],
-                                      title            : {text: "Debit Spread vs Max Profit %"},
-                                      data             : scatter_data
-                                    }
-                                   );
+    var chart = new CanvasJS.Chart("chartContainer",
+                                   {
+                                     animationEnabled : false,
+                                     theme            : "light2",
+                                     axisX            : [{title: x_axis_label}],
+                                     axisY            : [{logarithmic: logScale, title: y_axis_label}],
+                                     title            : {text: "Debit Spread vs Max Profit %"},
+                                     data             : scatter_data
+                                   }
+                                  );
     var index;
     var min = max_profit_pc[0];
     var max = max_profit_pc[0];
     for (index = 0; index < premium.length; ++index) {
-      chart2.options.data[0].dataPoints.push({
-                                                x     : long_strike[index],
-                                                y     : max_profit_pc[index],
-                                                a     : premium[index],
-                                                b     : short_strike[index],
-                                                c     : max_profit[index],
-                                                d     : distance_from_breakeven[index],
-                                                color : itm_color(distance_from_breakeven[index])
-                                              });
+      chart.options.data[0].dataPoints.push({
+                                               x     : long_strike[index],
+                                               y     : max_profit_pc[index],
+                                               a     : premium[index],
+                                               b     : short_strike[index],
+                                               c     : max_profit[index],
+                                               d     : distance_from_breakeven[index],
+                                               color : itm_color(distance_from_breakeven[index])
+                                             });
       if (max_profit_pc[index] <= min) {
         min = max_profit_pc[index];
       }
@@ -135,9 +135,9 @@
         max = max_profit_pc[index];
       }
     }
-    chart2.options.data[1].dataPoints.push({ x: curr_price, y: min});
-    chart2.options.data[1].dataPoints.push({ x: curr_price, y: max});
-    chart2.render();
+    chart.options.data[1].dataPoints.push({ x: curr_price, y: min});
+    chart.options.data[1].dataPoints.push({ x: curr_price, y: max});
+    chart.render();
   }
 </script>
 {% endblock javascripts %}

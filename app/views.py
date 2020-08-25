@@ -264,15 +264,17 @@ def covered_calls_chart(request):
               (item['symbol'], item['curr_price'], item['call_price'], item['exp_date'], item['strike'], item['effective_cost'], item['max_profit'], item['max_profit_pc']))
     print (len(calculations))
 
-    # ctx['y_axis']         = 'symbol'
-    # ctx['x_axis']         = 'max_profit_percentage'
-    # ctx['symbol']         = [ entry['symbol']         for entry in calculations]
-    # ctx['strike']         = [ entry['strike']         for entry in calculations]
-    # ctx['exp_date']       = [ entry['exp_date']       for entry in calculations]
-    # ctx['max_profit']     = [ entry['max_profit']     for entry in calculations]
-    # ctx['call_price']     = [ entry['call_price']     for entry in calculations]
-    # ctx['curr_price']     = [ entry['curr_price']     for entry in calculations]
-    # ctx['max_profit_pc']  = [ entry['max_profit_pc']  for entry in calculations]
-    # ctx['effective_cost'] = [ entry['effective_cost'] for entry in calculations]
+    ctx['y_axis']         = 'symbol'
+    ctx['x_axis']         = 'max_profit_percentage'
+    ctx['symbol']         = [ entry['symbol']         for entry in calculations]
+    ctx['strike']         = [ entry['strike']         for entry in calculations]
+    ctx['exp_date']       = [ entry['exp_date']       for entry in calculations]
+    ctx['max_profit']     = [ entry['max_profit']     for entry in calculations]
+    ctx['call_price']     = [ entry['call_price']     for entry in calculations]
+    ctx['curr_price']     = [ entry['curr_price']     for entry in calculations]
+    ctx['max_profit_pc']  = [ entry['max_profit_pc']  for entry in calculations]
+    ctx['effective_cost'] = [ entry['effective_cost'] for entry in calculations]
+    print (ctx['symbol'])
+    print (len(ctx['symbol']))
     ctx['table'] = calculations
     return render(request, 'covered_calls_chart.html', ctx)

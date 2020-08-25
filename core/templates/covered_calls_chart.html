@@ -24,14 +24,7 @@
   {% csrf_token %}
   <!-- {{ form }} -->
   <!-- commenting graph part right now -->
-  <!-- <div class="content-wrapper">
-    <h4">ticker: {{ticker}}</h4>
-    <br/>
-    <h4">Exp: {{date}}</h4>
-    <br/>
-    <h4">Number for Strikes: {{num_strikes}}</h4>
-    <br/>
-    <h4">Current Price: $ {{curr_price}}</h4>
+  <div class="content-wrapper">
     <div class="row stretch-card">
       <div class="card">
         <div class="card-body">
@@ -40,8 +33,7 @@
         </div>
       </div>
     </div>
-  </div> -->
-
+  </div>
   <div class="content-wrapper">
     <div class="row">
       <div class="col-lg-12 grid-margin stretch-card">
@@ -90,81 +82,34 @@
 <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
 {% endblock plugin_javascripts %}
 {% block javascripts %}
-<!-- <script>
-  var scatter_data =
-  [{
-    type: "scatter",
-    toolTipContent: "premium: $ {a}<br/>short_strike: $ {b}<br/>max_profit: $ {c}<br/>max_profit %: {y}<br/>distance_from_breakeven %: {d}",
-    dataPoints: []
-  }];
-
-  function itm_color(itm_pc) {
-    // following is the color scheme
-    // c4fcc5 0 to 1      fac8c6    0 to -1
-    // 95fa98 1 to 2      f69c99   -1 to -2
-    // 37f63d 2 to 3      f3706b   -2 to -3
-    // 07c40d 3 to 4      ef443e   -3 to -4
-    // 06950a 4 to 5      ea1a12   -4 to -5
-    // 046507 5 +         bc150f   -5 -
-    var colors = [
-      "#bc150f",
-      "#ea1a12",
-      "#ef443e",
-      "#f3706b",
-      "#f69c99",
-      "#fac8c6",
-      "#c4fcc5",
-      "#95fa98",
-      "#37f63d",
-      "#07c40d",
-      "#06950a",
-      "#046507",
-    ];
-    itm_pc = Math.floor(itm_pc + 6);
-    if (itm_pc < 0) {
-      itm_pc = 0;
-    }
-    if (itm_pc > 11) {
-      itm_pc = 11;
-    }
-    return colors[itm_pc];
-  }
-
+<script>
   window.onload = function () {
-    var x_axis = "{{x_axis}}";
-    var y_axis = "{{y_axis}}";
-    var symbol = {{ symbol | safe}};
-    var strike = {{ strike | safe}};
-    var exp_date = {{ exp_date | safe}};
-    var max_profit = {{ max_profit | safe}};
-    var call_price = {{ call_price | safe}};
-    var curr_price = {{ curr_price | safe}};
-    var max_profit_pc = {{ max_profit_pc | safe}};
-    var effective_cost = {{ effective_cost | safe}};
-
+    var idx             = 0;
+    var y_axis          = "{{ y_axis }}";
+    var x_axis          = "{{ x_axis }}";
+    var symbol          = {{ symbol         | safe }};
+    var strike          = {{ strike         | safe }};
+    var exp_date        = {{ exp_date       | safe }};
+    var max_profit      = {{ max_profit     | safe }};
+    var call_price      = {{ call_price     | safe }};
+    var curr_price      = {{ curr_price     | safe }};
+    var max_profit_pc   = {{ max_profit_pc  | safe }};
+    var effective_cost  = {{ effective_cost | safe }};
+    var scatter_data    = [{ type: "scatter", dataPoints: [] }];
     var chart = new CanvasJS.Chart("chartContainer",
                                    {
-                                     animationEnabled : false,
-                                     theme            : "light2",
-                                     axisX            : [{title: x_axis}],
-                                     axisY            : [{title: y_axis}],
-                                     title            : {text: "Covered Call vs Max Profit %"},
-                                     data             : scatter_data
+                                     animationEnabled   : true,
+                                     zoomEnabled        : true,
+                                     title              : {text: "Max profit vs coverd call"},
+                                     axisX              : {title:"ticker"},
+                                     axisY              : {logarithmic: true, title: "Max profit percentage"},
+                                     data               : scatter_data,
                                    }
                                   );
-    var idx;
-    for (idx = 0; idx < premium.length; ++idx) {
-      chart.options.data[0].dataPoints.push({
-                                                label : symbol[idx],
-                                                y     : max_profit_pc[idx]
-                                                a     : premium[idx],
-                                                b     : short_strike[idx],
-                                                c     : max_profit[idx],
-                                                d     : distance_from_breakeven[idx],
-                                                color : itm_color(distance_from_breakeven[idx])
-                                              });
+    for (idx = 0; idx < symbol.length; ++idx) {
+      chart.options.data[0].dataPoints.push({ label : symbol[idx], y : max_profit_pc[idx] });
     }
     chart.render();
   }
-</script> -->
+</script>
 {% endblock javascripts %}
