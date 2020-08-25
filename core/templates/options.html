@@ -8,8 +8,6 @@
 {% block content %}
 
 <form action="/options/" method="POST">
-  <!-- <label for="your_name">Your name: </label>
-  <input id="your_name" type="text" name="your_name" value="{{ current_name }}"> -->
   {% csrf_token %}
   <!-- {{ form }} -->
   <div class="content-wrapper">
@@ -34,7 +32,6 @@
                     <th> unrealized_pl </th>
                     <th> today_unrealized_pl </th>
                     <th> portfolio_diversity </th>
-                    <th> long_term </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -53,7 +50,6 @@
                       <td> {{ row.pp_unrealized_pl | floatformat:2 }} </td>
                       <td> {{ row.pp_today_unrealized_pl | floatformat:2 }} </td>
                       <td> {{ row.pp_portfolio_diversity | floatformat:2 }} </td>
-                      <td> <input type="checkbox" name="long_term" value={{ row.option_id }} {% if row.long_term %} checked {% endif %} /> </td>
                     </tr>
                   {% endfor %}
                 </tbody>

@@ -8,8 +8,7 @@
 {% block content %}
 
 <form action="/stocks/" method="POST">
-  <!-- <label for="your_name">Your name: </label>
-  <input id="your_name" type="text" name="your_name" value="{{ current_name }}"> -->
+  <input type="submit" value="submit" name='submit'>
   {% csrf_token %}
   <!-- {{ form }} -->
   <div class="content-wrapper">
@@ -23,16 +22,15 @@
                   <tr>
                     <th> symbol </th>
                     <th> quantity </th>
-                    <th> average_price </th>
+                    <th> avg / curr price </th>
                     <th> equity </th>
-                    <th> cost_basis </th>
-                    <th> open_price </th>
-                    <th> prev_close_price </th>
-                    <th> latest_price </th>
+                    <!-- <th> cost_basis </th> -->
+                    <!-- <th> open_price </th> -->
+                    <!-- <th> prev_close_price </th> -->
                     <th> unrealized_pl </th>
                     <th> today_unrealized_pl </th>
                     <th> portfolio_diversity </th>
-                    <th> long_term </th>
+                    <th> keywords </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -40,16 +38,15 @@
                     <tr>
                       <td> {{ row.symbol }} </td>
                       <td> {{ row.quantity | floatformat:2 }} </td>
-                      <td> {{ row.average_price | floatformat:2 }} </td>
+                      <td> {{ row.average_price | floatformat:2 }} / {{ row.latest_price | floatformat:2 }} </td>
                       <td> {{ row.pp_equity | floatformat:2 }} </td>
-                      <td> {{ row.pp_cost_basis | floatformat:2 }} </td>
-                      <td> {{ row.open_price | floatformat:2 }} </td>
-                      <td> {{ row.prev_close_price | floatformat:2 }} </td>
-                      <td> {{ row.latest_price | floatformat:2 }} </td>
+                      <!-- <td> {{ row.pp_cost_basis | floatformat:2 }} </td> -->
+                      <!-- <td> {{ row.open_price | floatformat:2 }} </td> -->
+                      <!-- <td> {{ row.prev_close_price | floatformat:2 }} </td> -->
                       <td> {{ row.pp_unrealized_pl | floatformat:2 }} </td>
                       <td> {{ row.pp_today_unrealized_pl | floatformat:2 }} </td>
                       <td> {{ row.pp_portfolio_diversity | floatformat:2 }} </td>
-                      <td> <input type="checkbox" name="long_term" value={{ row.symbol }} {% if row.long_term %} checked {% endif %} /> </td>
+                      <td> <input id="keywords" type="text" name="keywords" value="{{ row.keywords }}"/> </td>
                     </tr>
                   {% endfor %}
                 </tbody>
@@ -59,7 +56,6 @@
         </div>
       </div>
     </div>
-    <input type="submit" value="submit">
   </div>
 </form>
 

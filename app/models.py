@@ -17,6 +17,7 @@ class stock_daily_db_table(models.Model):
 # Create your models here.
 class portfolio_summary(models.Model):
     timestamp                    = models.DateTimeField()
+    silver_gold_equity           = models.FloatField(default=0)                                             # processed
     stocks_equity                = models.FloatField(default=0)                                             # processed
     options_equity               = models.FloatField(default=0)                                             # processed
     portfolio_cash               = models.FloatField(default=0)                                             # processed, sum of portfolio cash from all brokers
@@ -28,6 +29,7 @@ class portfolio_summary(models.Model):
 class stocks_held(models.Model):
     # first set of fields are fetched from broker's API
     symbol                  = models.CharField(max_length=5)                                                # raw
+    keywords                = models.CharField(max_length=100)                                              # raw
     average_price           = models.FloatField()                                                           # raw
     quantity                = models.FloatField()                                                           # raw
     open_price              = models.FloatField()                                                           # raw
@@ -39,7 +41,6 @@ class stocks_held(models.Model):
     pp_unrealized_pl        = models.FloatField(default=0)                                                  # processed
     pp_today_unrealized_pl  = models.FloatField(default=0)                                                  # processed
     pp_portfolio_diversity  = models.FloatField(default=0)                                                  # processed
-    pp_long_term            = models.BooleanField(default=False)                                            # processed
 
 # table for options being held
 class options_held(models.Model):
@@ -61,7 +62,6 @@ class options_held(models.Model):
     pp_unrealized_pl        = models.FloatField(default=0)                                                  # processed
     pp_today_unrealized_pl  = models.FloatField(default=0)                                                  # processed
     pp_portfolio_diversity  = models.FloatField(default=0)                                                  # processed
-    pp_long_term            = models.BooleanField(default=False)                                            # processed
 
 class robinhood_traded_stocks(models.Model):
     symbol                 = models.CharField(max_length=5)                                                 # raw

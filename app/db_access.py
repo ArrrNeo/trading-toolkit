@@ -32,7 +32,8 @@ class DbAccess():
     ############################################################################################################
     @staticmethod
     def calc_my_stock_positions():
-        equity_total = 0
+        stocks_equity = 0
+        silver_gold_equity = 0
         today_unrealized_pl = 0
         total_unrealized_pl = 0
 
@@ -57,11 +58,15 @@ class DbAccess():
             item.pp_today_unrealized_pl = item.pp_equity - (item.prev_close_price * item.quantity)
             item.save()
 
-            equity_total             = equity_total + item.pp_equity
+            if 'silver' in item.keywords or 'gold' in item.keywords:
+                silver_gold_equity   = silver_gold_equity + item.pp_equity
+            else:
+                stocks_equity        = stocks_equity + item.pp_equity
             total_unrealized_pl      = total_unrealized_pl + item.pp_unrealized_pl
             today_unrealized_pl      = today_unrealized_pl + item.pp_today_unrealized_pl
 
-        summary.stocks_equity              = equity_total
+        summary.stocks_equity              = stocks_equity
+        summary.silver_gold_equity         = silver_gold_equity
         summary.total_stocks_unrealized_pl = total_unrealized_pl
         summary.save()
 
@@ -328,6 +333,8 @@ class DbAccess():
             return 0
         if x == 'stocks_equity':
             return obj[0].stocks_equity
+        if x == 'silver_gold_equity':
+            return obj[0].silver_gold_equity
         if x == 'options_equity':
             return obj[0].options_equity
         if x == 'portfolio_cash':
@@ -346,6 +353,8 @@ class DbAccess():
             return
         if x == 'stocks_equity':
             obj[0].stocks_equity = val
+        if x == 'silver_gold_equity':
+            obj[0].silver_gold_equity = val
         if x == 'options_equity':
             obj[0].options_equity = val
         if x == 'portfolio_cash':
