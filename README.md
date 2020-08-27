@@ -5,7 +5,12 @@ This project started as a way to give me better interface for robinhood I had fe
 4) historical data of daily/weekly/monthly profit loss
 5) and many more.
 
-However apart from displaying current portfolio, other features like calculating historic profit loss is been tough and I am working on it less frequently right now. Other than robinhood integration I also started working on side tool (and possible more to come) debit spread chart. This basically gives me for a given stock and date what debit spread would yeild what max profit. So I have changed default page to point to debit spread chart.
+For my own trading, I am interested in filtering out data in a way which I could not find online. So I started developing tool to help me in that.
+This project is collection of those tools (and possible more to come)
+1) Debit spread chart.
+   This plots for a given stock and date "debit spread" vs "max profit percentage"
+2) Covered Call screener.
+   This plots for given filters "covered calls" vs "max profit percentage"
 
 ![Image Debit Spread Chart](./media/debit_spread.png)
 
@@ -29,20 +34,10 @@ $
 $ # Install modules - SQLite Storage
 $ pip3 install -r requirements.txt
 $
-$ # patch pyrh library. this is one of the robinhood access library patched to avoid asking for SMS everytime
-$ ./patch_pyrh_lib.sh
-$
 $ # Create tables
 $ python manage.py makemigrations
 $ python manage.py migrate
 $
-$ # if you want to reset database you can later run
-$ ./reset-db.sh
-$
-$ # create username.txt and password.txt files inside app folder.
-$ # these files will not be uploaded to git and are gitignored
-$ # if you dont want to use portfolio feature yet, no need for above step
-
 $ # Start the application (development mode)
 $ python manage.py runserver # default port 8000
 $
