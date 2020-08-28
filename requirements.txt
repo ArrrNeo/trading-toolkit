@@ -13,7 +13,7 @@ django-tables2
 lxml
 html5lib
 BeautifulSoup4
-
+django_heroku
 mplcursors==0.3
 numpy==1.18.4
 yfinance==0.1.54
