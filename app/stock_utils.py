@@ -72,12 +72,17 @@ class StockUtils():
 
     @staticmethod
     # get stock info from yahoo finance
+    def getCurrentPrice(ticker):
+        return yf.Ticker(ticker).history().tail(1)['Close'].iloc[0]
+
+    @staticmethod
+    # get stock info from yahoo finance
     def getOptions(ticker, date):
         obj = yf.Ticker(ticker)
-        data = obj.option_chain(date).calls[['ask', 'bid', 'strike']]
+        data = obj.option_chain(date).calls[['strike', 'lastPrice', 'bid', 'ask', 'volume', 'openInterest', 'impliedVolatility', 'inTheMoney']]
         return data.to_dict('records')
     
     @staticmethod
     # get stock info from yahoo finance
     def getOptionsDate(ticker):
-        return yf.Ticker(ticker).options
+        return list(yf.Ticker(ticker).options)

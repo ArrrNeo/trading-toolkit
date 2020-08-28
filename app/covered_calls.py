@@ -46,6 +46,8 @@ class CoveredCalls:
             obj = yf.Ticker(sym)
             try:
                 option_dates = obj.options
+                if not option_dates:
+                    continue
             except Exception as e:
                 continue
 
@@ -64,6 +66,8 @@ class CoveredCalls:
                         itm_percent = ((stock_curr_price - row['strike']) / row['strike']) * 100
                         if row['bid'] != 0 or row['ask'] != 0:
                             call_price = (row['bid'] + row['ask']) / 2
+                        if str(call_price) == 'nan':
+                            continue
                         effective_cost = stock_curr_price - call_price
                         max_profit = row['strike'] - effective_cost
                         max_profit_pc = (max_profit / effective_cost) *  100
@@ -98,7 +102,7 @@ class CoveredCalls:
         start_time = time.time()
         manager = multiprocessing.Manager()
         calculations = manager.list()
-        with parallel_backend('loky', n_jobs=multiprocessing.cpu_count() * 2):
+        with parallel_backend('loky', n_jobs=multiprocessing.cpu_count()):
             Parallel()(delayed(self.getData)(x, calculations) for x in tqdm(list_of_tickers))
 
         print("--- this took %s seconds to run ---" % (time.time() - start_time))

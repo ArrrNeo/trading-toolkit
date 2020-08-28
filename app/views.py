@@ -60,8 +60,7 @@ def debit_spread_chart(request):
     ctx['num_strikes'] = num_strikes
     ctx['min_profit_pc'] = min_profit_pc
 
-    info = StockUtils.getStockInfo(ticker)
-    curr_price = (info['bid'] + info['ask'])/2
+    curr_price = StockUtils.getCurrentPrice(ticker)
     ctx['curr_price'] = curr_price
 
     data = StockUtils.getOptions(ticker, option_date)
@@ -70,14 +69,17 @@ def debit_spread_chart(request):
     for i in range(0, len(data)):
         for j in range(i+1, len(data)):
             entry = {}
-            entry['premium'] = data[i]['ask'] - data[j]['bid']
+            if data[i]['ask'] == 0 and data[j]['bid'] == 0:
+                entry['premium'] = data[i]['lastPrice'] - data[j]['lastPrice']
+            else:
+                entry['premium'] = data[i]['ask'] - data[j]['bid']
             entry['max_profit'] = (data[j]['strike'] - data[i]['strike']) - entry['premium']
             entry['long_strike'] = data[i]['strike']
             entry['short_strike'] = data[j]['strike']
-            # entry['trade'] = 'buy: ' + str(entry['long_strike']) + 'c, sell: ' + str(entry['short_strike']) + 'c'
+            entry['trade'] = 'buy: ' + str(entry['long_strike']) + 'c, sell: ' + str(entry['short_strike']) + 'c'
             if entry['premium'] == 0:
                 continue
-            entry['distance_from_breakeven'] = ((ctx['curr_price'] - (entry['long_strike'] + entry['premium'])) / ctx['curr_price']) * 100
+            entry['distance_from_breakeven'] = ((curr_price - (entry['long_strike'] + entry['premium'])) / curr_price) * 100
             entry['max_profit_pc'] = (entry['max_profit'] / entry['premium']) * 100
             if entry['max_profit_pc'] <= min_profit_pc:
                 continue
@@ -99,8 +101,8 @@ def debit_spread_chart(request):
 
 def covered_calls_chart(request):
     ctx               = {}
-    min_stock_price   = 0
-    max_stock_price   = 5
+    min_stock_price   = 100
+    max_stock_price   = 105
     min_itm_pc        = 0
     max_itm_pc        = 50
     min_max_profit_pc = 10
@@ -121,12 +123,12 @@ def covered_calls_chart(request):
     ctx['min_max_profit_pc'] = min_max_profit_pc
     ctx['max_days_to_exp']   = max_days_to_exp
 
-    print (min_stock_price)
-    print (max_stock_price)
-    print (min_itm_pc)
-    print (max_itm_pc)
-    print (min_max_profit_pc)
-    print (max_days_to_exp)
+    # print (min_stock_price)
+    # print (max_stock_price)
+    # print (min_itm_pc)
+    # print (max_itm_pc)
+    # print (min_max_profit_pc)
+    # print (max_days_to_exp)
 
     obj = CoveredCalls(min_stock_price=min_stock_price,
                        max_stock_price=max_stock_price,
@@ -136,10 +138,10 @@ def covered_calls_chart(request):
                        max_days_to_exp=max_days_to_exp)
     calculations = obj.main_func()
 
-    for item in calculations:
-        print("symbol: %5s, curr_price: %7.2f, call_price: %7.2f, exp: %s, strike: %7.2f, effective_cost: %7.2f, max_profit: %7.2f, max_profit_pc: %7.2f" %
-              (item['symbol'], item['curr_price'], item['call_price'], item['exp_date'], item['strike'], item['effective_cost'], item['max_profit'], item['max_profit_pc']))
-    print (len(calculations))
+    # for item in calculations:
+    #     print("symbol: %5s, curr_price: %7.2f, call_price: %7.2f, exp: %s, strike: %7.2f, effective_cost: %7.2f, max_profit: %7.2f, max_profit_pc: %7.2f" %
+    #           (item['symbol'], item['curr_price'], item['call_price'], item['exp_date'], item['strike'], item['effective_cost'], item['max_profit'], item['max_profit_pc']))
+    # print (len(calculations))
 
     ctx['y_axis']         = 'symbol'
     ctx['x_axis']         = 'max_profit_percentage'
@@ -151,7 +153,7 @@ def covered_calls_chart(request):
     ctx['curr_price']     = [ entry['curr_price']     for entry in calculations]
     ctx['max_profit_pc']  = [ entry['max_profit_pc']  for entry in calculations]
     ctx['effective_cost'] = [ entry['effective_cost'] for entry in calculations]
-    print (ctx['symbol'])
-    print (len(ctx['symbol']))
+    # print (ctx['symbol'])
+    # print (len(ctx['symbol']))
     ctx['table'] = calculations
     return render(request, 'covered_calls_chart.html', ctx)

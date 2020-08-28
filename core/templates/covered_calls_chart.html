@@ -95,7 +95,11 @@
     var curr_price      = {{ curr_price     | safe }};
     var max_profit_pc   = {{ max_profit_pc  | safe }};
     var effective_cost  = {{ effective_cost | safe }};
-    var scatter_data    = [{ type: "scatter", dataPoints: [] }];
+    var scatter_data    = [{
+                              type            : "scatter",
+                              toolTipContent  : "sell {a}c exp: {b}",
+                              dataPoints      : []
+                            }];
     var chart = new CanvasJS.Chart("chartContainer",
                                    {
                                      animationEnabled   : true,
@@ -107,7 +111,12 @@
                                    }
                                   );
     for (idx = 0; idx < symbol.length; ++idx) {
-      chart.options.data[0].dataPoints.push({ label : symbol[idx], y : max_profit_pc[idx] });
+      chart.options.data[0].dataPoints.push({
+                                              label : symbol[idx],
+                                              y     : max_profit_pc[idx],
+                                              a     : strike[idx],
+                                              b     : exp_date[idx]
+                                            });
     }
     chart.render();
   }
