@@ -16,4 +16,5 @@ urlpatterns = [
     path('', views.debit_spread_chart, name='debit_spread_chart'),
     path('debit_spread_chart/', views.debit_spread_chart, name='debit_spread_chart'),
     path('covered_calls_chart/', views.covered_calls_chart, name='covered_calls_chart'),
+    path('covered_calls_chart_results/', views.covered_calls_chart_results, name='covered_calls_chart_results'),
 ]
