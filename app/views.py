@@ -48,7 +48,7 @@ def debit_spread_chart(request):
         option_date = str(request.POST.get('date'))
         num_strikes = int(request.POST.get('num_strikes'))
         log_scale = bool(request.POST.get('log_scale'))
-        min_profit_pc = int(request.POST.get('min_profit_pc'))
+        min_profit_pc = float(request.POST.get('min_profit_pc'))
 
     ctx = StockUtils.getDebitSpreads(ticker, option_date, num_strikes, log_scale, min_profit_pc)
     return render(request, 'debit_spread_chart.html', ctx)
@@ -63,12 +63,12 @@ def covered_calls_chart(request):
     min_max_profit_pc = 20
 
     if request.method == 'POST':
-        min_itm_pc        = int(request.POST.get('min_itm_pc'))
-        max_itm_pc        = int(request.POST.get('max_itm_pc'))
-        min_stock_price   = int(request.POST.get('min_stock_price'))
-        max_stock_price   = int(request.POST.get('max_stock_price'))
-        max_days_to_exp   = int(request.POST.get('max_days_to_exp'))
-        min_max_profit_pc = int(request.POST.get('min_max_profit_pc'))
+        min_itm_pc        = float(request.POST.get('min_itm_pc'))
+        max_itm_pc        = float(request.POST.get('max_itm_pc'))
+        min_stock_price   = float(request.POST.get('min_stock_price'))
+        max_stock_price   = float(request.POST.get('max_stock_price'))
+        max_days_to_exp   = float(request.POST.get('max_days_to_exp'))
+        min_max_profit_pc = float(request.POST.get('min_max_profit_pc'))
 
         task = asyn_cc_chart.delay(min_stock_price=min_stock_price,
                                 max_stock_price=max_stock_price,
