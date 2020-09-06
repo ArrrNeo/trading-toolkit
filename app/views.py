@@ -67,7 +67,7 @@ def covered_calls_chart(request):
         max_itm_pc        = float(request.POST.get('max_itm_pc'))
         min_stock_price   = float(request.POST.get('min_stock_price'))
         max_stock_price   = float(request.POST.get('max_stock_price'))
-        max_days_to_exp   = float(request.POST.get('max_days_to_exp'))
+        max_days_to_exp   = int(request.POST.get('max_days_to_exp'))
         min_max_profit_pc = float(request.POST.get('min_max_profit_pc'))
 
         task = asyn_cc_chart.delay(min_stock_price=min_stock_price,
