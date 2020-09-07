@@ -10,6 +10,7 @@ import yfinance as yf
 import dateutil.parser
 from heapq import nsmallest
 import dateutil.relativedelta
+from finviz.screener import Screener
 from app.stocklist import NasdaqController
 from celery_progress.backend import ProgressRecorder
 
@@ -32,7 +33,10 @@ class StockUtils():
     @staticmethod
     # get stock info from yahoo finance
     def getOptionsDate(ticker):
-        return list(yf.Ticker(ticker).options)
+        try:
+            return list(yf.Ticker(ticker).options)
+        except Exception as e:
+            return []
     
     @staticmethod
     # get info for debit spread chart
@@ -81,28 +85,15 @@ class StockUtils():
 
     @staticmethod
     def CoveredCall_helper_func_2(sym, calculations, min_stock_price, max_stock_price, min_itm_pc, max_itm_pc, min_max_profit_pc, max_days_to_exp):
-        # filter out stocks based on price
-        try:
-            stock_curr_price = data.iloc[0]['Close'][sym]
-        except Exception as e:
-            return
+        if min_stock_price != -1 and max_stock_price != -1:
+            # filter out stocks based on price
+            stock_curr_price = StockUtils.getCurrentPrice(sym)
+            if str(stock_curr_price) == 'nan':
+                return
+            if stock_curr_price < min_stock_price or stock_curr_price > max_stock_price:
+                return
 
-        if str(stock_curr_price) == 'nan':
-            return
-
-        if stock_curr_price < min_stock_price or stock_curr_price > max_stock_price:
-            return
-
-        # filter out stocks if it does not have options
-        obj = yf.Ticker(sym)
-        try:
-            option_dates = obj.options
-        except Exception as e:
-            return
-
-        if not option_dates:
-            return
-
+        option_dates = StockUtils.getOptionsDate(sym)
         for dt in option_dates:
             dtt = datetime.datetime.strptime(dt, "%Y-%m-%d").date()
             currentDate = datetime.date.today()
@@ -147,14 +138,6 @@ class StockUtils():
 
     @staticmethod
     def CoveredCall_helper_func_1(tickers, calculations, min_stock_price, max_stock_price, min_itm_pc, max_itm_pc, min_max_profit_pc, max_days_to_exp):
-        currentDate = datetime.date.today()
-        if currentDate.weekday() == 0:
-            pastDate = currentDate - dateutil.relativedelta.relativedelta(days=3)
-        else:
-            pastDate = currentDate - dateutil.relativedelta.relativedelta(days=1)
-        sys.stdout = open(os.devnull, "w")
-        data = yf.download(tickers, pastDate, currentDate)
-        sys.stdout = sys.__stdout__
         for sym in tickers:
             StockUtils.CoveredCall_helper_func_2(sym,
                                                  calculations,
@@ -173,12 +156,32 @@ class StockUtils():
                        max_itm_pc=50,
                        min_max_profit_pc=5,
                        max_days_to_exp=30,
+                       finviz_price_filter="none",
+                       finviz_sector_filter="none",
                        progress_recorder=None,
                        debug_iterations=0):
+        filters = []
         lst_size = 8 # resize ticker list into sublist of following size
         calculations = []
-        StocksController = NasdaqController(True)
-        list_of_tickers = StocksController.getList()
+        # if finviz_price_filter is not "none", then ticker list is generated from
+        # finviz library and already match required price filter, hence:
+        # set min_stock_price = -1 and set max_stock_price = -1
+        if finviz_price_filter != "none":
+            min_stock_price = -1
+            max_stock_price = -1
+            filters.append(finviz_price_filter)
+
+        if finviz_sector_filter != "none":
+            filters.append(finviz_sector_filter)
+
+        # if finviz_price_filter or finviz_sector_filter is not "none"
+        # then fetch list of tickers from finviz
+        if len(filters):
+            list_of_tickers = list(Screener(filters=filters, table='Performance', order='price'))
+            list_of_tickers = [x['Ticker'] for x in list_of_tickers]
+        else:
+            StocksController = NasdaqController(True)
+            list_of_tickers = StocksController.getList()
 
         list_of_tickers = [list_of_tickers[i * lst_size:(i + 1) * lst_size] for i in range((len(list_of_tickers) + lst_size - 1) // lst_size )]
         if debug_iterations:

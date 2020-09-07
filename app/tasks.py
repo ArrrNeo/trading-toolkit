@@ -19,6 +19,8 @@ def asyn_cc_chart(self,
                   max_itm_pc,
                   min_max_profit_pc,
                   max_days_to_exp,
+                  finviz_price_filter,
+                  finviz_sector_filter,
                   debug_iterations):
     progress_recorder = ProgressRecorder(self)
     calculations = StockUtils.getCoveredCall(min_stock_price=min_stock_price,
@@ -27,6 +29,8 @@ def asyn_cc_chart(self,
                                              max_itm_pc=max_itm_pc,
                                              min_max_profit_pc=min_max_profit_pc,
                                              max_days_to_exp=max_days_to_exp,
+                                             finviz_price_filter=finviz_price_filter,
+                                             finviz_sector_filter=finviz_sector_filter,
                                              progress_recorder=progress_recorder,
                                              debug_iterations=debug_iterations)
     ctx                         = {}
@@ -39,6 +43,8 @@ def asyn_cc_chart(self,
     ctx['max_stock_price']      = max_stock_price
     ctx['max_days_to_exp']      = max_days_to_exp
     ctx['min_max_profit_pc']    = min_max_profit_pc
+    ctx['finviz_price_filter']  = finviz_price_filter
+    ctx['finviz_sector_filter'] = finviz_sector_filter
     ctx['x_axis']               = 'max_profit_percentage'
     ctx['symbol']               = [ entry['symbol']         for entry in calculations]
     ctx['strike']               = [ entry['strike']         for entry in calculations]

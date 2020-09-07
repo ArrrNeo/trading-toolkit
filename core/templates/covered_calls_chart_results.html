@@ -14,6 +14,8 @@
       <table class="table table-bordered">
         <thead>
           <tr>
+            <th> finviz_price_filter </th>
+            <th> finviz_sector_filter </th>
             <th> min_stock_price </th>
             <th> max_stock_price </th>
             <th> min_itm_pc </th>
@@ -24,8 +26,69 @@
         </thead>
         <tbody>
           <tr>
-            <td> <input id="min_stock_price"   type="text"     name="min_stock_price"   value="{{ min_stock_price }}"> </td>
-            <td> <input id="max_stock_price"   type="text"     name="max_stock_price"   value="{{ max_stock_price }}"> </td>
+            <td>
+              <select id="finviz_price_filter" name="finviz_price_filter">
+                <option value="none"             {% if finviz_price_filter == "none"             %} selected {% endif %} >none      </option>
+                <option value="sh_price_u1"      {% if finviz_price_filter == "sh_price_u1"      %} selected {% endif %} >under $1  </option>
+                <option value="sh_price_u2"      {% if finviz_price_filter == "sh_price_u2"      %} selected {% endif %} >under $2  </option>
+                <option value="sh_price_u3"      {% if finviz_price_filter == "sh_price_u3"      %} selected {% endif %} >under $3  </option>
+                <option value="sh_price_u4"      {% if finviz_price_filter == "sh_price_u4"      %} selected {% endif %} >under $4  </option>
+                <option value="sh_price_u5"      {% if finviz_price_filter == "sh_price_u5"      %} selected {% endif %} >under $5  </option>
+                <option value="sh_price_u7"      {% if finviz_price_filter == "sh_price_u7"      %} selected {% endif %} >under $7  </option>
+                <option value="sh_price_u10"     {% if finviz_price_filter == "sh_price_u10"     %} selected {% endif %} >under $10 </option>
+                <option value="sh_price_u15"     {% if finviz_price_filter == "sh_price_u15"     %} selected {% endif %} >under $15 </option>
+                <option value="sh_price_u20"     {% if finviz_price_filter == "sh_price_u20"     %} selected {% endif %} >under $20 </option>
+                <option value="sh_price_u30"     {% if finviz_price_filter == "sh_price_u30"     %} selected {% endif %} >under $30 </option>
+                <option value="sh_price_u40"     {% if finviz_price_filter == "sh_price_u40"     %} selected {% endif %} >under $40 </option>
+                <option value="sh_price_u50"     {% if finviz_price_filter == "sh_price_u50"     %} selected {% endif %} >under $50 </option>
+                <option value="sh_price_o1"      {% if finviz_price_filter == "sh_price_o1"      %} selected {% endif %} >over $1   </option>
+                <option value="sh_price_o2"      {% if finviz_price_filter == "sh_price_o2"      %} selected {% endif %} >over $2   </option>
+                <option value="sh_price_o3"      {% if finviz_price_filter == "sh_price_o3"      %} selected {% endif %} >over $3   </option>
+                <option value="sh_price_o4"      {% if finviz_price_filter == "sh_price_o4"      %} selected {% endif %} >over $4   </option>
+                <option value="sh_price_o5"      {% if finviz_price_filter == "sh_price_o5"      %} selected {% endif %} >over $5   </option>
+                <option value="sh_price_o7"      {% if finviz_price_filter == "sh_price_o7"      %} selected {% endif %} >over $7   </option>
+                <option value="sh_price_o10"     {% if finviz_price_filter == "sh_price_o10"     %} selected {% endif %} >over $10  </option>
+                <option value="sh_price_o15"     {% if finviz_price_filter == "sh_price_o15"     %} selected {% endif %} >over $15  </option>
+                <option value="sh_price_o20"     {% if finviz_price_filter == "sh_price_o20"     %} selected {% endif %} >over $20  </option>
+                <option value="sh_price_o30"     {% if finviz_price_filter == "sh_price_o30"     %} selected {% endif %} >over $30  </option>
+                <option value="sh_price_o40"     {% if finviz_price_filter == "sh_price_o40"     %} selected {% endif %} >over $40  </option>
+                <option value="sh_price_o50"     {% if finviz_price_filter == "sh_price_o50"     %} selected {% endif %} >over $50  </option>
+                <option value="sh_price_o60"     {% if finviz_price_filter == "sh_price_o60"     %} selected {% endif %} >over $60  </option>
+                <option value="sh_price_o70"     {% if finviz_price_filter == "sh_price_o70"     %} selected {% endif %} >over $70  </option>
+                <option value="sh_price_o80"     {% if finviz_price_filter == "sh_price_o80"     %} selected {% endif %} >over $80  </option>
+                <option value="sh_price_o90"     {% if finviz_price_filter == "sh_price_o90"     %} selected {% endif %} >over $90  </option>
+                <option value="sh_price_o100"    {% if finviz_price_filter == "sh_price_o100"    %} selected {% endif %} >over $100 </option>
+                <option value="sh_price_1to5"    {% if finviz_price_filter == "sh_price_1to5"    %} selected {% endif %} >$1-5      </option>
+                <option value="sh_price_1to10"   {% if finviz_price_filter == "sh_price_1to10"   %} selected {% endif %} >$1-10     </option>
+                <option value="sh_price_1to20"   {% if finviz_price_filter == "sh_price_1to20"   %} selected {% endif %} >$1-20     </option>
+                <option value="sh_price_5to10"   {% if finviz_price_filter == "sh_price_5to10"   %} selected {% endif %} >$5-10     </option>
+                <option value="sh_price_5to20"   {% if finviz_price_filter == "sh_price_5to20"   %} selected {% endif %} >$5-20     </option>
+                <option value="sh_price_5to50"   {% if finviz_price_filter == "sh_price_5to50"   %} selected {% endif %} >$5-50     </option>
+                <option value="sh_price_10to20"  {% if finviz_price_filter == "sh_price_10to20"  %} selected {% endif %} >$10-20    </option>
+                <option value="sh_price_10to50"  {% if finviz_price_filter == "sh_price_10to50"  %} selected {% endif %} >$10-50    </option>
+                <option value="sh_price_20to50"  {% if finviz_price_filter == "sh_price_20to50"  %} selected {% endif %} >$20-50    </option>
+                <option value="sh_price_50to100" {% if finviz_price_filter == "sh_price_50to100" %} selected {% endif %} >$50-100   </option>
+              </select>
+            </td>
+            <td>
+              <select id="finviz_sector_filter" name="finviz_sector_filter">
+                <option value="none"                      {% if finviz_sector_filter == "none"                      %} selected {% endif %} >none                  </option>
+                <option value="sec_basicmaterials"        {% if finviz_sector_filter == "sec_basicmaterials"        %} selected {% endif %} >basicmaterials        </option>
+                <option value="sec_communicationservices" {% if finviz_sector_filter == "sec_communicationservices" %} selected {% endif %} >communicationservices </option>
+                <option value="sec_consumercyclical"      {% if finviz_sector_filter == "sec_consumercyclical"      %} selected {% endif %} >consumercyclical      </option>
+                <option value="sec_consumerdefensive"     {% if finviz_sector_filter == "sec_consumerdefensive"     %} selected {% endif %} >consumerdefensive     </option>
+                <option value="sec_energy"                {% if finviz_sector_filter == "sec_energy"                %} selected {% endif %} >energy                </option>
+                <option value="sec_financial"             {% if finviz_sector_filter == "sec_financial"             %} selected {% endif %} >financial             </option>
+                <option value="sec_healthcare"            {% if finviz_sector_filter == "sec_healthcare"            %} selected {% endif %} >healthcare            </option>
+                <option value="sec_industrials"           {% if finviz_sector_filter == "sec_industrials"           %} selected {% endif %} >industrials           </option>
+                <option value="sec_realestate"            {% if finviz_sector_filter == "sec_realestate"            %} selected {% endif %} >realestate            </option>
+                <option value="sec_technology"            {% if finviz_sector_filter == "sec_technology"            %} selected {% endif %} >technology            </option>
+                <option value="sec_utilities"             {% if finviz_sector_filter == "sec_utilities"             %} selected {% endif %} >utilities             </option>
+                <option value="sh_price_u50"              {% if finviz_sector_filter == "sh_price_u50"              %} selected {% endif %} >under                 </option>
+              </select>
+            </td>
+            <td> <input id="min_stock_price"   type="text"     name="min_stock_price"   value="{{ min_stock_price }}" {% if finviz_price_filter != "none" %} disabled {% endif %}> </td>
+            <td> <input id="max_stock_price"   type="text"     name="max_stock_price"   value="{{ max_stock_price }}" {% if finviz_price_filter != "none" %} disabled {% endif %}> </td>
             <td> <input id="min_itm_pc"        type="text"     name="min_itm_pc"        value="{{ min_itm_pc }}"> </td>
             <td> <input id="max_itm_pc"        type="text"     name="max_itm_pc"        value="{{ max_itm_pc }}"> </td>
             <td> <input id="min_max_profit_pc" type="text"     name="min_max_profit_pc" value="{{ min_max_profit_pc }}"> </td>
@@ -97,6 +160,16 @@
 {% endblock plugin_javascripts %}
 {% block javascripts %}
 <script>
+  $("#finviz_price_filter").on("change", function(){
+    if ($(this).val() != "none") {
+      document.getElementById('min_stock_price').disabled = true;
+      document.getElementById('max_stock_price').disabled = true;
+    } else {
+      document.getElementById('min_stock_price').disabled = false;
+      document.getElementById('max_stock_price').disabled = false;
+    }
+  });
+
   window.onload = function () {
     var idx             = 0;
     var y_axis          = "{{ y_axis }}";

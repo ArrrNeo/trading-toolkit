@@ -61,14 +61,21 @@ def covered_calls_chart(request):
     min_stock_price      = 3
     max_stock_price      = 5
     min_max_profit_pc    = 20
+    finviz_price_filter  = "none"
+    finviz_sector_filter = "none"
 
     if request.method == 'POST':
         min_itm_pc            = float(request.POST.get('min_itm_pc'))
         max_itm_pc            = float(request.POST.get('max_itm_pc'))
-        min_stock_price       = float(request.POST.get('min_stock_price'))
-        max_stock_price       = float(request.POST.get('max_stock_price'))
         max_days_to_exp       = int(request.POST.get('max_days_to_exp'))
         min_max_profit_pc     = float(request.POST.get('min_max_profit_pc'))
+        finviz_price_filter   = request.POST.get('finviz_price_filter')
+        finviz_sector_filter  = request.POST.get('finviz_sector_filter')
+        try:
+            min_stock_price   = float(request.POST.get('min_stock_price'))
+            max_stock_price   = float(request.POST.get('max_stock_price'))
+        except Exception as e:
+            pass
 
         task = asyn_cc_chart.delay(min_stock_price=min_stock_price,
                                    max_stock_price=max_stock_price,
@@ -76,6 +83,8 @@ def covered_calls_chart(request):
                                    max_itm_pc=max_itm_pc,
                                    min_max_profit_pc=min_max_profit_pc,
                                    max_days_to_exp=max_days_to_exp,
+                                   finviz_price_filter=finviz_price_filter,
+                                   finviz_sector_filter=finviz_sector_filter,
                                    debug_iterations=0)
 
         return render(request, 'covered_calls_chart_progress.html', { 'task_id' : task.task_id })
@@ -86,6 +95,8 @@ def covered_calls_chart(request):
         ctx['max_stock_price']      = max_stock_price
         ctx['max_days_to_exp']      = max_days_to_exp
         ctx['min_max_profit_pc']    = min_max_profit_pc
+        ctx['finviz_price_filter']  = finviz_price_filter
+        ctx['finviz_sector_filter'] = finviz_sector_filter
         return render(request, 'covered_calls_chart_results.html', ctx)
 
 def covered_calls_chart_results(request):
