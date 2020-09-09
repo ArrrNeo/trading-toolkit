@@ -8,19 +8,34 @@
 {% block content %}
 
 <form action="/covered_calls_chart/" method="POST">
-  <label for="min_stock_price">min_stock_price: </label>
-  <input id="min_stock_price" type="text" name="min_stock_price" value="{{ min_stock_price }}">
-  <label for="max_stock_price">max_stock_price: </label>
-  <input id="max_stock_price" type="text" name="max_stock_price" value="{{ max_stock_price }}">
-  <label for="min_itm_pc">min_itm_pc: </label>
-  <input id="min_itm_pc" type="text" name="min_itm_pc" value="{{ min_itm_pc }}">
-  <label for="max_itm_pc">max_itm_pc: </label>
-  <input id="max_itm_pc" type="text" name="max_itm_pc" value="{{ max_itm_pc }}">
-  <label for="min_max_profit_pc">min_max_profit_pc: </label>
-  <input id="min_max_profit_pc" type="text" name="min_max_profit_pc" value="{{ min_max_profit_pc }}">
-  <label for="max_days_to_exp">max_days_to_exp: </label>
-  <input id="max_days_to_exp" type="text" name="max_days_to_exp" value="{{ max_days_to_exp }}">
-  <input type="submit" value="submit" name='submit'>
+  <div class="card">
+    <div class="card-body">
+      <h4 class="card-title">filters</h4>
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th> min_stock_price </th>
+            <th> max_stock_price </th>
+            <th> min_itm_pc </th>
+            <th> max_itm_pc </th>
+            <th> min_max_profit_pc </th>
+            <th> max_days_to_exp </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td> <input id="min_stock_price"   type="text"     name="min_stock_price"   value="{{ min_stock_price }}"> </td>
+            <td> <input id="max_stock_price"   type="text"     name="max_stock_price"   value="{{ max_stock_price }}"> </td>
+            <td> <input id="min_itm_pc"        type="text"     name="min_itm_pc"        value="{{ min_itm_pc }}"> </td>
+            <td> <input id="max_itm_pc"        type="text"     name="max_itm_pc"        value="{{ max_itm_pc }}"> </td>
+            <td> <input id="min_max_profit_pc" type="text"     name="min_max_profit_pc" value="{{ min_max_profit_pc }}"> </td>
+            <td> <input id="max_days_to_exp"   type="text"     name="max_days_to_exp"   value="{{ max_days_to_exp }}"> </td>
+          </tr>
+        </tbody>
+      </table>
+      <input type="submit" value="submit" name='submit'>
+    </div>
+  </div>
   {% csrf_token %}
   <!-- {{ form }} -->
   <!-- commenting graph part right now -->
@@ -74,7 +89,6 @@
       </div>
     </div>
   </div>
-
 </form>
 
 {% endblock content %}

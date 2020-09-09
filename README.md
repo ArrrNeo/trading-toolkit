@@ -47,6 +47,16 @@ $
 $ # Access the web app in browser: http://127.0.0.1:8000/
 ```
 
+## For Heroku deployment
+```bash
+$ # make sure following configs are set
+$ heroku config:set HEROKU_DEPLOYEMENT=1
+$
+$ heroku config:set CELERY_BROKER_URL="your CELERY_BROKER_URL addon url"
+$
+$ heroku config:set CELERY_RESULT_BACKEND="your CELERY_RESULT_BACKEND addon url"
+```
+
 ## Credits & Links
 
 - [Django](https://www.djangoproject.com/) - The offcial website

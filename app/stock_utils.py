@@ -167,13 +167,22 @@ class StockUtils():
 
     @staticmethod
     # get info for covered call chart
-    def getCoveredCall(progress_recorder, min_stock_price=0, max_stock_price=5, min_itm_pc=0, max_itm_pc=50, min_max_profit_pc=5, max_days_to_exp=30):
-        lst_size = 8
+    def getCoveredCall(min_stock_price=0,
+                       max_stock_price=5,
+                       min_itm_pc=0,
+                       max_itm_pc=50,
+                       min_max_profit_pc=5,
+                       max_days_to_exp=30,
+                       progress_recorder=None,
+                       debug_iterations=0):
+        lst_size = 8 # resize ticker list into sublist of following size
         calculations = []
         StocksController = NasdaqController(True)
         list_of_tickers = StocksController.getList()
+
         list_of_tickers = [list_of_tickers[i * lst_size:(i + 1) * lst_size] for i in range((len(list_of_tickers) + lst_size - 1) // lst_size )]
-        # list_of_tickers = list_of_tickers[:3]
+        if debug_iterations:
+            list_of_tickers = list_of_tickers[:debug_iterations]
         length = len(list_of_tickers)
 
         for i in range(length):
@@ -185,6 +194,7 @@ class StockUtils():
                                                  max_itm_pc,
                                                  min_max_profit_pc,
                                                  max_days_to_exp)
-            progress_recorder.set_progress(i + 1, length, f'On iteration {i}')
+            if progress_recorder:
+                progress_recorder.set_progress(i + 1, length, f'On iteration {i}')
 
         return calculations

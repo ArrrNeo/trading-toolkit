@@ -54,37 +54,38 @@ def debit_spread_chart(request):
     return render(request, 'debit_spread_chart.html', ctx)
 
 def covered_calls_chart(request):
-    ctx               = {}
-    min_itm_pc        = 0
-    max_itm_pc        = 50
-    max_days_to_exp   = 30
-    min_stock_price   = 3
-    max_stock_price   = 5
-    min_max_profit_pc = 20
+    ctx                  = {}
+    min_itm_pc           = 0
+    max_itm_pc           = 50
+    max_days_to_exp      = 30
+    min_stock_price      = 3
+    max_stock_price      = 5
+    min_max_profit_pc    = 20
 
     if request.method == 'POST':
-        min_itm_pc        = float(request.POST.get('min_itm_pc'))
-        max_itm_pc        = float(request.POST.get('max_itm_pc'))
-        min_stock_price   = float(request.POST.get('min_stock_price'))
-        max_stock_price   = float(request.POST.get('max_stock_price'))
-        max_days_to_exp   = int(request.POST.get('max_days_to_exp'))
-        min_max_profit_pc = float(request.POST.get('min_max_profit_pc'))
+        min_itm_pc            = float(request.POST.get('min_itm_pc'))
+        max_itm_pc            = float(request.POST.get('max_itm_pc'))
+        min_stock_price       = float(request.POST.get('min_stock_price'))
+        max_stock_price       = float(request.POST.get('max_stock_price'))
+        max_days_to_exp       = int(request.POST.get('max_days_to_exp'))
+        min_max_profit_pc     = float(request.POST.get('min_max_profit_pc'))
 
         task = asyn_cc_chart.delay(min_stock_price=min_stock_price,
-                                max_stock_price=max_stock_price,
-                                min_itm_pc=min_itm_pc,
-                                max_itm_pc=max_itm_pc,
-                                min_max_profit_pc=min_max_profit_pc,
-                                max_days_to_exp=max_days_to_exp)
+                                   max_stock_price=max_stock_price,
+                                   min_itm_pc=min_itm_pc,
+                                   max_itm_pc=max_itm_pc,
+                                   min_max_profit_pc=min_max_profit_pc,
+                                   max_days_to_exp=max_days_to_exp,
+                                   debug_iterations=0)
 
         return render(request, 'covered_calls_chart_progress.html', { 'task_id' : task.task_id })
     else:
-        ctx['min_itm_pc']        = min_itm_pc
-        ctx['max_itm_pc']        = max_itm_pc
-        ctx['min_stock_price']   = min_stock_price
-        ctx['max_stock_price']   = max_stock_price
-        ctx['max_days_to_exp']   = max_days_to_exp
-        ctx['min_max_profit_pc'] = min_max_profit_pc
+        ctx['min_itm_pc']           = min_itm_pc
+        ctx['max_itm_pc']           = max_itm_pc
+        ctx['min_stock_price']      = min_stock_price
+        ctx['max_stock_price']      = max_stock_price
+        ctx['max_days_to_exp']      = max_days_to_exp
+        ctx['min_max_profit_pc']    = min_max_profit_pc
         return render(request, 'covered_calls_chart_results.html', ctx)
 
 def covered_calls_chart_results(request):
@@ -96,4 +97,3 @@ def covered_calls_chart_results(request):
         # return HttpResponse(json.dumps(task.result), content_type='application/json')
     else:
         return HttpResponse('No job id given.')
-    
