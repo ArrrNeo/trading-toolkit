@@ -101,6 +101,7 @@ class StockUtils():
             if (dtt - dateutil.relativedelta.relativedelta(days=max_days_to_exp)) > currentDate:
                 continue
             try:
+                obj = yf.Ticker(sym)
                 option_chains = obj.option_chain(dt).calls[['strike', 'lastPrice', 'bid', 'ask', 'volume', 'openInterest', 'impliedVolatility', 'inTheMoney']]
                 # only consider in the money options
                 option_chains = option_chains[option_chains['inTheMoney'] == True]
