@@ -1,7 +1,18 @@
+# standard imports
 from time import sleep
-from celery import shared_task
+
+# app imports
 from app.stock_utils import StockUtils
+
+# celery imports
+from celery import shared_task
+from celery.decorators import periodic_task
 from celery_progress.backend import ProgressRecorder
+from datetime import timedelta
+
+@periodic_task(run_every=timedelta(hours=12), name="periodic_task", ignore_result=True)
+def return_5():
+    return 5
 
 @shared_task(bind=True)
 def go_to_sleep(self, duration):

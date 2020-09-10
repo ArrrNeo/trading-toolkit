@@ -32,3 +32,6 @@ app/migrations/0*.py
 app/scratchpad/*
 db.sqlite3.sqbpro
 .env
+celerybeat-schedule
+celerybeat.pid
+data/*

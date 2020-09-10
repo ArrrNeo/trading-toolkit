@@ -38,6 +38,9 @@ $ # Create tables
 $ python manage.py makemigrations
 $ python manage.py migrate
 $
+$ # Start celery and celery beat scheduler (celery beat for periodic task)
+$ celery -A core worker --beat -l info
+$
 $ # Start the application (development mode)
 $ python manage.py runserver # default port 8000
 $
@@ -55,6 +58,10 @@ $
 $ heroku config:set CELERY_BROKER_URL="your CELERY_BROKER_URL addon url"
 $
 $ heroku config:set CELERY_RESULT_BACKEND="your CELERY_RESULT_BACKEND addon url"
+$
+$ heroku ps:scale web=1
+$
+$ heroku ps:scale celery=1
 ```
 
 ## Credits & Links
