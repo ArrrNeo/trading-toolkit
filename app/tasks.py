@@ -60,6 +60,15 @@ def asyn_cc_chart(self,
     ctx['finviz_sector_filter'] = finviz_sector_filter
     ctx['x_axis']               = 'max_profit_percentage'
     ctx['symbol']               = [ entry['symbol']         for entry in calculations]
+
+    lst_of_unique = list(set(ctx['symbol']))
+    for item in calculations:
+        # x will be index of symbol in list of unique symbols
+        symbol = item['symbol']
+        x = lst_of_unique.index(symbol)
+        item.update( { 'x': x } )
+    ctx['x']                    = [ entry['x']              for entry in calculations]
+
     ctx['strike']               = [ entry['strike']         for entry in calculations]
     ctx['exp_date']             = [ entry['exp_date']       for entry in calculations]
     ctx['max_profit']           = [ entry['max_profit']     for entry in calculations]
