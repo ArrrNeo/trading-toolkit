@@ -10,6 +10,7 @@ import yfinance as yf
 import dateutil.parser
 from heapq import nsmallest
 import dateutil.relativedelta
+from app.models import screener
 from finviz.screener import Screener
 from app.stocklist import NasdaqController
 from celery_progress.backend import ProgressRecorder
@@ -84,16 +85,17 @@ class StockUtils():
         return ctx
 
     @staticmethod
-    def CoveredCall_helper_func_2(sym, calculations, min_stock_price, max_stock_price, min_itm_pc, max_itm_pc, min_max_profit_pc, max_days_to_exp):
+    def CoveredCall_helper_func_2(stock, calculations, min_stock_price, max_stock_price, min_itm_pc, max_itm_pc, min_max_profit_pc, max_days_to_exp):
         if min_stock_price != -1 and max_stock_price != -1:
             # filter out stocks based on price
-            stock_curr_price = StockUtils.getCurrentPrice(sym)
+            symbol = stock['symbol']
+            stock_curr_price = stock['price']
             if str(stock_curr_price) == 'nan':
                 return
             if stock_curr_price < min_stock_price or stock_curr_price > max_stock_price:
                 return
 
-        option_dates = StockUtils.getOptionsDate(sym)
+        option_dates = StockUtils.getOptionsDate(symbol)
         for dt in option_dates:
             dtt = datetime.datetime.strptime(dt, "%Y-%m-%d").date()
             currentDate = datetime.date.today()
@@ -101,7 +103,7 @@ class StockUtils():
             if (dtt - dateutil.relativedelta.relativedelta(days=max_days_to_exp)) > currentDate:
                 continue
             try:
-                obj = yf.Ticker(sym)
+                obj = yf.Ticker(symbol)
                 option_chains = obj.option_chain(dt).calls[['strike', 'lastPrice', 'bid', 'ask', 'volume', 'openInterest', 'impliedVolatility', 'inTheMoney']]
                 # only consider in the money options
                 option_chains = option_chains[option_chains['inTheMoney'] == True]
@@ -125,22 +127,22 @@ class StockUtils():
 
                     # append this to final list
                     entry = {}
-                    entry['symbol'] = sym
-                    entry['exp_date'] = dt
-                    entry['strike'] = row['strike']
-                    entry['max_profit'] = max_profit
-                    entry['call_price'] = call_price
-                    entry['curr_price'] = stock_curr_price
-                    entry['max_profit_pc'] = max_profit_pc
+                    entry['exp_date']       = dt
+                    entry['symbol']         = symbol
+                    entry['max_profit']     = max_profit
+                    entry['call_price']     = call_price
+                    entry['strike']         = row['strike']
+                    entry['max_profit_pc']  = max_profit_pc
                     entry['effective_cost'] = effective_cost
+                    entry['curr_price']     = stock_curr_price
                     calculations.append(entry)
             except Exception as e:
                 pass
 
     @staticmethod
     def CoveredCall_helper_func_1(tickers, calculations, min_stock_price, max_stock_price, min_itm_pc, max_itm_pc, min_max_profit_pc, max_days_to_exp):
-        for sym in tickers:
-            StockUtils.CoveredCall_helper_func_2(sym,
+        for stock in tickers:
+            StockUtils.CoveredCall_helper_func_2(stock,
                                                  calculations,
                                                  min_stock_price,
                                                  max_stock_price,
@@ -179,10 +181,9 @@ class StockUtils():
         # then fetch list of tickers from finviz
         if len(filters):
             list_of_tickers = list(Screener(filters=filters, table='Performance', order='price'))
-            list_of_tickers = [x['Ticker'] for x in list_of_tickers]
+            list_of_tickers = [{'symbol': x['Ticker'], 'price': x['Price']} for x in list_of_tickers]
         else:
-            StocksController = NasdaqController(True)
-            list_of_tickers = StocksController.getList()
+            list_of_tickers = screener.objects.all().values()
 
         list_of_tickers = [list_of_tickers[i * lst_size:(i + 1) * lst_size] for i in range((len(list_of_tickers) + lst_size - 1) // lst_size )]
         if debug_iterations:
@@ -202,3 +203,32 @@ class StockUtils():
                 progress_recorder.set_progress(i + 1, length, f'On iteration {i}')
 
         return calculations
+
+    @staticmethod
+    # get basic info for all stock tickers for the purpose of screener
+    def populateScreener():
+        currentDate = datetime.date.today()
+        lst_size = 16 # resize ticker list into sublist of following size
+        if currentDate.weekday() == 0:
+            pastDate = currentDate - dateutil.relativedelta.relativedelta(days=3)
+        else:
+            pastDate = currentDate - dateutil.relativedelta.relativedelta(days=1)
+
+        list_of_tickers = NasdaqController(True).getList()
+        list_of_list_of_tickers = [list_of_tickers[i * lst_size:(i + 1) * lst_size] for i in range((len(list_of_tickers) + lst_size - 1) // lst_size )]
+        # list_of_list_of_tickers = list_of_list_of_tickers[:5]
+        # count = 1
+        # num_itr = len(list_of_list_of_tickers)
+        for tickers in list_of_list_of_tickers:
+            sys.stdout = open(os.devnull, "w")
+            data = yf.download(tickers, pastDate, currentDate)
+            sys.stdout = sys.__stdout__
+            # print ("itr %3d of %3d" % (count, num_itr))
+            # count = count + 1
+            for sym in tickers:
+                try:
+                    curr_price = data.iloc[0]['Close'][sym]
+                    # print (curr_price)
+                    screener.objects.update_or_create(symbol=sym, defaults={ 'price': curr_price })
+                except Exception as e:
+                    continue

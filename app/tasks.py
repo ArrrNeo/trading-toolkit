@@ -9,10 +9,12 @@ from celery import shared_task
 from celery.decorators import periodic_task
 from celery_progress.backend import ProgressRecorder
 from datetime import timedelta
+from app.stock_utils import StockUtils
 
-@periodic_task(run_every=timedelta(hours=12), name="periodic_task", ignore_result=True)
-def return_5():
-    return 5
+@periodic_task(run_every=timedelta(hours=12), name="periodic_task_populate_screener", ignore_result=True)
+def populate_screener():
+    print ('populate_screener')
+    StockUtils.populateScreener()
 
 @shared_task(bind=True)
 def go_to_sleep(self, duration):

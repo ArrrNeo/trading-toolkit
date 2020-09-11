@@ -72,16 +72,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/3.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
-
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
 
@@ -133,6 +123,10 @@ STATICFILES_DIRS = (
 
 HEROKU_DEPLOYEMENT = os.environ.get("HEROKU_DEPLOYEMENT")
 
+# Database
+# https://docs.djangoproject.com/en/3.0/ref/settings/#databases
+
+
 if not HEROKU_DEPLOYEMENT:
     print ("HEROKU_DEPLOYEMENT = " + str(HEROKU_DEPLOYEMENT))
     CELERY_BROKER_URL = 'redis://localhost:6379'
@@ -140,12 +134,19 @@ if not HEROKU_DEPLOYEMENT:
     CELERY_ACCEPT_CONTENT = ['application/json']
     CELERY_TASK_SERIALIZER = 'json'
     CELERY_RESULT_SERIALIZER = 'json'
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
+    }
 else:
     print ("HEROKU_DEPLOYEMENT = " + str(HEROKU_DEPLOYEMENT))
     # Activate Django-Heroku.
     django_heroku.settings(locals())
-
     CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL")
     CELERY_ACCEPT_CONTENT = ['json']
     CELERY_TASK_SERIALIZER = 'json'
     CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND")
+    DATABASES['default'] =  dj_database_url.config()
+    print (DATABASES['default'])

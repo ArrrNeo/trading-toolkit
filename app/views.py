@@ -18,6 +18,7 @@ from celery.result import AsyncResult
 
 from app.tasks import asyn_cc_chart
 from app.stock_utils import StockUtils
+from app.models import screener
 
 def pages(request):
     context = {}
@@ -108,3 +109,7 @@ def covered_calls_chart_results(request):
         # return HttpResponse(json.dumps(task.result), content_type='application/json')
     else:
         return HttpResponse('No job id given.')
+
+def db(request):
+    table = screener.objects.all()
+    return render(request, "db.html", {"table": table})
