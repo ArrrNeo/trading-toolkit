@@ -121,6 +121,9 @@ class StockUtils():
             try:
                 option_chains = StockUtils.getCallOptions(symbol, dt)
                 for row in option_chains:
+                    # remove invalid option stikes (tradier api is reporting incorrect strikes for some)
+                    if row['strike'] % 0.25 != 0:
+                        continue
                     # only consider in the money options
                     if row['strike'] > stock_curr_price:
                         continue
