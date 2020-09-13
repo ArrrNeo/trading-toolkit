@@ -37,3 +37,4 @@ celerybeat.pid
 data/*
 # local script
 reset-db.sh
+sandbox/*

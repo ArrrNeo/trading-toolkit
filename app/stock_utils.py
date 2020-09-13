@@ -5,6 +5,7 @@ import os
 import sys
 import logging
 import datetime
+import requests
 import pandas as pd
 import yfinance as yf
 import dateutil.parser
@@ -26,16 +27,25 @@ class StockUtils():
 
     @staticmethod
     # get stock info from yahoo finance
-    def getOptions(ticker, date):
-        obj = yf.Ticker(ticker)
-        data = obj.option_chain(date).calls[['strike', 'lastPrice', 'bid', 'ask', 'volume', 'openInterest', 'impliedVolatility', 'inTheMoney']]
-        return data.to_dict('records')
+    def getCallOptions(ticker, exp_date):
+        try:
+            tradier_key = os.environ.get('TRADIER_KEY')
+            response = requests.get('https://sandbox.tradier.com/v1/markets/options/chains',
+                                params={'symbol': ticker, 'expiration': exp_date, 'greeks': 'true'},
+                                headers={'Authorization': 'Bearer ' + tradier_key, 'Accept': 'application/json'}).json()
+            return [x for x in response['options']['option'] if x['option_type'] == 'call']
+        except Exception as e:
+            return []
     
     @staticmethod
     # get stock info from yahoo finance
     def getOptionsDate(ticker):
         try:
-            return list(yf.Ticker(ticker).options)
+            tradier_key = os.environ.get('TRADIER_KEY')
+            response = requests.get('https://sandbox.tradier.com/v1/markets/options/expirations',
+                                    params={'symbol': ticker, 'includeAllRoots': 'true', 'strikes': 'true'},
+                                    headers={'Authorization': 'Bearer ' + tradier_key, 'Accept': 'application/json'}).json()
+            return [x['date'] for x in response['expirations']['expiration']]
         except Exception as e:
             return []
     
@@ -45,16 +55,22 @@ class StockUtils():
         ctx          = {}
         calculations = []
         curr_price   = StockUtils.getCurrentPrice(ticker)
-        data = StockUtils.getOptions(ticker, option_date)
+        data = StockUtils.getCallOptions(ticker, option_date)
         data = nsmallest(num_strikes, data, key=lambda x: abs(x['strike'] - curr_price))
         data = sorted(data, key=lambda k: k['strike'])
         for i in range(0, len(data)):
             for j in range(i+1, len(data)):
                 entry = {}
-                if data[i]['ask'] == 0 and data[j]['bid'] == 0:
-                    entry['premium'] = data[i]['lastPrice'] - data[j]['lastPrice']
+                # print ('long: strike: %5.2f, ask: %5.2f, last: %5.2f, short: strike: %5.2f, bid: %5.2f, last: %5.2f' % (data[i]['strike'], data[i]['ask'], data[i]['last'], data[j]['strike'], data[j]['bid'], data[j]['last']))
+                if data[i]['ask']:
+                    ask = data[i]['ask']
                 else:
-                    entry['premium'] = data[i]['ask'] - data[j]['bid']
+                    ask = data[i]['last']
+                if data[j]['bid']:
+                    bid = data[j]['bid']
+                else:
+                    bid = data[j]['last']
+                entry['premium'] = ask - bid
                 entry['max_profit'] = (data[j]['strike'] - data[i]['strike']) - entry['premium']
                 entry['long_strike'] = data[i]['strike']
                 entry['short_strike'] = data[j]['strike']
@@ -103,17 +119,16 @@ class StockUtils():
             if (dtt - dateutil.relativedelta.relativedelta(days=max_days_to_exp)) > currentDate:
                 continue
             try:
-                obj = yf.Ticker(symbol)
-                option_chains = obj.option_chain(dt).calls[['strike', 'lastPrice', 'bid', 'ask', 'volume', 'openInterest', 'impliedVolatility', 'inTheMoney']]
-                # only consider in the money options
-                option_chains = option_chains[option_chains['inTheMoney'] == True]
-                for index, row in option_chains.iterrows():
-                    call_price = row['lastPrice']
-                    itm_percent = ((stock_curr_price - row['strike']) / row['strike']) * 100
-                    if row['bid'] != 0 or row['ask'] != 0:
-                        call_price = (row['bid'] + row['ask']) / 2
-                    if str(call_price) == 'nan':
+                option_chains = StockUtils.getCallOptions(symbol, dt)
+                for row in option_chains:
+                    # only consider in the money options
+                    if row['strike'] > stock_curr_price:
                         continue
+                    if row['ask'] == 0 or row['bid'] == 0:
+                        call_price = row['last']
+                    else:
+                        call_price = (row['ask'] + row['bid'])/2
+                    itm_percent = ((stock_curr_price - row['strike']) / row['strike']) * 100
                     effective_cost = stock_curr_price - call_price
                     max_profit = row['strike'] - effective_cost
                     max_profit_pc = (max_profit / effective_cost) *  100
