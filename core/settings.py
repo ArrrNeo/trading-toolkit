@@ -134,12 +134,8 @@ if not HEROKU_DEPLOYEMENT:
     CELERY_ACCEPT_CONTENT = ['application/json']
     CELERY_TASK_SERIALIZER = 'json'
     CELERY_RESULT_SERIALIZER = 'json'
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        }
-    }
+    DATABASES = {}
+    DATABASES['default'] =  dj_database_url.config()
 else:
     print ("HEROKU_DEPLOYEMENT = " + str(HEROKU_DEPLOYEMENT))
     # Activate Django-Heroku.

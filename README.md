@@ -38,6 +38,9 @@ $ # Create tables
 $ python manage.py makemigrations
 $ python manage.py migrate
 $
+$ # we are using postgress. update postgress url in your bashrc
+$ export DATABASE_URL='postgres://<user>:<password>@<host>:<port>/<database_name (same as user) >' 
+$
 $ # Start celery and celery beat scheduler (celery beat for periodic task)
 $ celery -A core worker --beat -l info
 $
