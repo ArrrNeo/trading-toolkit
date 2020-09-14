@@ -23,7 +23,10 @@ class StockUtils():
     @staticmethod
     # get stock info from yahoo finance
     def getCurrentPrice(ticker):
-        return yf.Ticker(ticker).history().tail(1)['Close'].iloc[0]
+        try:
+            return yf.Ticker(ticker).history().tail(1)['Close'].iloc[0]
+        except Exception as e:
+            return 0
 
     @staticmethod
     # get stock info from yahoo finance
@@ -103,8 +106,8 @@ class StockUtils():
     @staticmethod
     def CoveredCall_helper_func_2(stock, calculations, min_itm_pc, max_itm_pc, min_max_profit_pc, max_days_to_exp):
         symbol = stock['symbol']
-        stock_curr_price = stock['price']
-        if str(stock_curr_price) == 'nan':
+        stock_curr_price = StockUtils.getCurrentPrice(symbol)
+        if stock_curr_price == 0:
             return
 
         option_dates = StockUtils.getOptionsDate(symbol)
