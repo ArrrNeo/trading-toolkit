@@ -12,7 +12,6 @@ import dateutil.parser
 from heapq import nsmallest
 import dateutil.relativedelta
 from app.models import screener
-from finviz.screener import Screener
 from app.stocklist import NasdaqController
 from celery_progress.backend import ProgressRecorder
 
@@ -104,8 +103,7 @@ class StockUtils():
         return ctx
 
     @staticmethod
-    def CoveredCall_helper_func_2(stock, calculations, min_itm_pc, max_itm_pc, min_max_profit_pc, max_days_to_exp):
-        symbol = stock['symbol']
+    def CoveredCall_helper_func_2(symbol, calculations, min_itm_pc, max_itm_pc, min_max_profit_pc, max_days_to_exp):
         stock_curr_price = StockUtils.getCurrentPrice(symbol)
         if stock_curr_price == 0:
             return
@@ -174,31 +172,15 @@ class StockUtils():
                        max_itm_pc=50,
                        min_max_profit_pc=5,
                        max_days_to_exp=30,
-                       finviz_price_filter="none",
-                       finviz_sector_filter="none",
                        progress_recorder=None,
                        debug_iterations=0):
         filters = []
         lst_size = 8 # resize ticker list into sublist of following size
         calculations = []
-        # if finviz_price_filter is not "none",
-        # then ticker list is generated from finviz library
-        # and already match required price filter
-        if finviz_price_filter != "none":
-            filters.append(finviz_price_filter)
 
-        if finviz_sector_filter != "none":
-            filters.append(finviz_sector_filter)
-
-        # if finviz_price_filter or finviz_sector_filter is not "none"
-        # then fetch list of tickers from finviz
-        if len(filters):
-            list_of_tickers = list(Screener(filters=filters, table='Performance', order='price'))
-            list_of_tickers = [{'symbol': x['Ticker'], 'price': x['Price']} for x in list_of_tickers]
-        else:
-            list_of_tickers = screener.objects.all().values()
-            # filter db rows, based on price (will also filter out invalid entries)
-            list_of_tickers = [x for x in list_of_tickers if x['price'] != 0 and x['price'] >= min_stock_price and x['price'] <= max_stock_price]
+        list_of_tickers = screener.objects.all().values()
+        # filter db rows, based on price (will also filter out invalid entries)
+        list_of_tickers = [x['symbol'] for x in list_of_tickers if x['price'] != 0 and x['price'] >= min_stock_price and x['price'] <= max_stock_price]
 
         list_of_tickers = [list_of_tickers[i * lst_size:(i + 1) * lst_size] for i in range((len(list_of_tickers) + lst_size - 1) // lst_size )]
         if debug_iterations:
