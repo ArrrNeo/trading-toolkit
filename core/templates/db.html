@@ -16,6 +16,7 @@
                   <th> price </th>
                   <th> sector </th>
                   <th> industry </th>
+                  <th> options </th>
                 </tr>
               </thead>
               <tbody>
@@ -25,6 +26,7 @@
                   <td> {{ row.price | floatformat:2 }} </td>
                   <td> {{ row.sector }} </td>
                   <td> {{ row.industry }} </td>
+                  <td> {{ row.options }} </td>
                 </tr>
                 {% endfor %}
               </tbody>

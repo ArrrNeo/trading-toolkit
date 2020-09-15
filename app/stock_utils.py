@@ -112,7 +112,7 @@ class StockUtils():
         for dt in option_dates:
             dtt = datetime.datetime.strptime(dt, "%Y-%m-%d").date()
             currentDate = datetime.date.today()
-            # for a given stock ignore optiosn more than 30 days away
+            # for a given stock ignore options more than 30 days away
             if (dtt - dateutil.relativedelta.relativedelta(days=max_days_to_exp)) > currentDate:
                 continue
             try:
@@ -171,6 +171,8 @@ class StockUtils():
                        min_itm_pc=0,
                        max_itm_pc=50,
                        min_max_profit_pc=5,
+                       sector_filter='none',
+                       industry_filter='none',
                        max_days_to_exp=30,
                        progress_recorder=None,
                        debug_iterations=0):
@@ -179,8 +181,14 @@ class StockUtils():
         calculations = []
 
         list_of_tickers = screener.objects.all().values()
+        # filter based on sector
+        if sector_filter != 'none':
+            list_of_tickers = [x for x in list_of_tickers if x['sector'] == sector_filter]
+        # filter based on industry
+        if industry_filter != 'none':
+            list_of_tickers = [x for x in list_of_tickers if x['industry'] == industry_filter]
         # filter db rows, based on price (will also filter out invalid entries)
-        list_of_tickers = [x['symbol'] for x in list_of_tickers if x['price'] != 0 and x['price'] >= min_stock_price and x['price'] <= max_stock_price]
+        list_of_tickers = [x['symbol'] for x in list_of_tickers if x['price'] != 0 and x['price'] >= min_stock_price and x['price'] <= max_stock_price and x['options'] == True]
 
         list_of_tickers = [list_of_tickers[i * lst_size:(i + 1) * lst_size] for i in range((len(list_of_tickers) + lst_size - 1) // lst_size )]
         if debug_iterations:
@@ -249,8 +257,35 @@ class StockUtils():
                 sys.stdout = sys.__stdout__
                 sector = tk.info['sector']
                 industry = tk.info['industry']
-                screener.objects.update_or_create(symbol=ticker, defaults={ 'price': price, 'sector': sector, 'industry': industry})
+                # find if options are available for ticker
+                try:
+                    opt_dates = tk.options
+                    if opt_dates:
+                        options = True
+                    else:
+                        options = False
+                except Exception as e:
+                    options = False
+                screener.objects.update_or_create(symbol=ticker, defaults={ 'price': price, 'sector': sector, 'industry': industry, 'options': options})
             except Exception as e:
                 # mark failed tickers as invalid enties in db so that they are not treated as new again
-                screener.objects.update_or_create(symbol=ticker, defaults={ 'price': 0, 'sector': '', 'industry': ''})
+                screener.objects.update_or_create(symbol=ticker, defaults={ 'price': 0, 'sector': '', 'industry': '', 'options': False})
                 continue
+
+    @staticmethod
+    # place-holder function to update table new field
+    def updateScreener():
+        print ('updateScreener')
+        saved_stocks = screener.objects.all().values()
+        saved_tickers = [x['symbol'] for x in saved_stocks]
+        count = 1
+        num_itr = len(saved_tickers)
+        for ticker in saved_tickers:
+            print ("itr %3d of %3d" % (count, num_itr))
+            count = count + 1
+            opt_dates = StockUtils.getOptionsDate(ticker)
+            if opt_dates:
+                screener.objects.update_or_create(symbol=ticker, defaults={ 'options': True })
+            else:
+                screener.objects.update_or_create(symbol=ticker, defaults={ 'options': False })
+        return

@@ -10,11 +10,17 @@ from celery.decorators import periodic_task
 from celery_progress.backend import ProgressRecorder
 from datetime import timedelta
 from app.stock_utils import StockUtils
+from app.models import screener
 
 @periodic_task(run_every=timedelta(hours=12), name="periodic_task_populate_screener", ignore_result=True)
 def populate_screener():
     print ('populate_screener')
     StockUtils.populateScreener()
+
+@shared_task(bind=True)
+def update_screener(self, duration):
+    print ('update_screener')
+    StockUtils.updateScreener()
 
 @shared_task(bind=True)
 def go_to_sleep(self, duration):
@@ -31,6 +37,8 @@ def asyn_cc_chart(self,
                   min_itm_pc,
                   max_itm_pc,
                   min_max_profit_pc,
+                  sector_filter,
+                  industry_filter,
                   max_days_to_exp,
                   debug_iterations):
     progress_recorder = ProgressRecorder(self)
@@ -39,6 +47,8 @@ def asyn_cc_chart(self,
                                              min_itm_pc=min_itm_pc,
                                              max_itm_pc=max_itm_pc,
                                              min_max_profit_pc=min_max_profit_pc,
+                                             sector_filter=sector_filter,
+                                             industry_filter=industry_filter,
                                              max_days_to_exp=max_days_to_exp,
                                              progress_recorder=progress_recorder,
                                              debug_iterations=debug_iterations)
@@ -70,4 +80,15 @@ def asyn_cc_chart(self,
     ctx['curr_price']           = [ entry['curr_price']     for entry in calculations]
     ctx['max_profit_pc']        = [ entry['max_profit_pc']  for entry in calculations]
     ctx['effective_cost']       = [ entry['effective_cost'] for entry in calculations]
+
+    tickers = screener.objects.all().values()
+    sector_options = list(set([x['sector'] for x in tickers]))
+    sector_options.remove('')
+    industry_options = list(set([x['industry'] for x in tickers]))
+    industry_options.remove('')
+    ctx['sector_options']       = sector_options
+    ctx['industry_options']     = industry_options
+    ctx['sector_filter']        = sector_filter
+    ctx['industry_filter']      = industry_filter
+
     return ctx

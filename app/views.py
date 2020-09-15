@@ -68,28 +68,54 @@ def covered_calls_chart(request):
         max_itm_pc            = float(request.POST.get('max_itm_pc'))
         max_days_to_exp       = int(request.POST.get('max_days_to_exp'))
         min_max_profit_pc     = float(request.POST.get('min_max_profit_pc'))
-        try:
-            min_stock_price   = float(request.POST.get('min_stock_price'))
-            max_stock_price   = float(request.POST.get('max_stock_price'))
-        except Exception as e:
-            pass
+        min_stock_price       = float(request.POST.get('min_stock_price'))
+        max_stock_price       = float(request.POST.get('max_stock_price'))
+        sector_filter         = request.POST.get('sector_filter')
+        industry_filter       = request.POST.get('industry_filter')
+        if sector_filter == 'Select Sector':
+            sector_filter = 'none'
+        if industry_filter == 'Select Industry':
+            industry_filter = 'none'
 
         task = asyn_cc_chart.delay(min_stock_price=min_stock_price,
                                    max_stock_price=max_stock_price,
                                    min_itm_pc=min_itm_pc,
                                    max_itm_pc=max_itm_pc,
                                    min_max_profit_pc=min_max_profit_pc,
+                                   sector_filter=sector_filter,
+                                   industry_filter=industry_filter,
                                    max_days_to_exp=max_days_to_exp,
                                    debug_iterations=0)
 
         return render(request, 'covered_calls_chart_progress.html', { 'task_id' : task.task_id })
     else:
+        tickers = screener.objects.all().values()
+        sector_options = list(set([x['sector'] for x in tickers]))
+        sector_options.remove('')
+        industry_options = list(set([x['industry'] for x in tickers]))
+        industry_options.remove('')
         ctx['min_itm_pc']           = min_itm_pc
         ctx['max_itm_pc']           = max_itm_pc
         ctx['min_stock_price']      = min_stock_price
         ctx['max_stock_price']      = max_stock_price
         ctx['max_days_to_exp']      = max_days_to_exp
         ctx['min_max_profit_pc']    = min_max_profit_pc
+        ctx['x']                    = []
+        ctx['table']                = []
+        ctx['symbol']               = []
+        ctx['strike']               = []
+        ctx['exp_date']             = []
+        ctx['max_profit']           = []
+        ctx['call_price']           = []
+        ctx['curr_price']           = []
+        ctx['max_profit_pc']        = []
+        ctx['effective_cost']       = []
+        ctx['y_axis']               = 'symbol'
+        ctx['x_axis']               = 'max_profit_percentage'
+        ctx['sector_options']       = sector_options
+        ctx['industry_options']     = industry_options
+        ctx['sector_filter']        = 'none'
+        ctx['industry_filter']      = 'none'
         return render(request, 'covered_calls_chart_results.html', ctx)
 
 def covered_calls_chart_results(request):
