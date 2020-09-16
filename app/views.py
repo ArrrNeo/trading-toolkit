@@ -54,7 +54,7 @@ def debit_spread_chart(request):
     ctx = StockUtils.getDebitSpreads(ticker, option_date, num_strikes, log_scale, min_profit_pc)
     return render(request, 'debit_spread_chart.html', ctx)
 
-def covered_calls_chart(request):
+def covered_calls_screener(request):
     ctx                  = {}
     min_itm_pc           = 0
     max_itm_pc           = 50
@@ -87,7 +87,7 @@ def covered_calls_chart(request):
                                    max_days_to_exp=max_days_to_exp,
                                    debug_iterations=0)
 
-        return render(request, 'covered_calls_chart_progress.html', { 'task_id' : task.task_id })
+        return render(request, 'covered_calls_screener_progress.html', { 'task_id' : task.task_id })
     else:
         tickers = screener.objects.all().values()
         sector_options = list(set([x['sector'] for x in tickers]))
@@ -116,14 +116,14 @@ def covered_calls_chart(request):
         ctx['industry_options']     = industry_options
         ctx['sector_filter']        = 'none'
         ctx['industry_filter']      = 'none'
-        return render(request, 'covered_calls_chart_results.html', ctx)
+        return render(request, 'covered_calls_screener_results.html', ctx)
 
-def covered_calls_chart_results(request):
+def covered_calls_screener_results(request):
     print (request)
     task_id = request.GET.get('task_id', None)
     if task_id is not None:
         task = AsyncResult(task_id)
-        return render(request, 'covered_calls_chart_results.html', task.result)
+        return render(request, 'covered_calls_screener_results.html', task.result)
         # return HttpResponse(json.dumps(task.result), content_type='application/json')
     else:
         return HttpResponse('No job id given.')
