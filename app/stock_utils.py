@@ -108,15 +108,17 @@ class StockUtils():
         if stock_curr_price == 0:
             return
 
+        currentDate  = datetime.date.today()
+        max_exp_date = currentDate + dateutil.relativedelta.relativedelta(days=max_days_to_exp)
         option_dates = StockUtils.getOptionsDate(symbol)
-        for dt in option_dates:
-            dtt = datetime.datetime.strptime(dt, "%Y-%m-%d").date()
-            currentDate = datetime.date.today()
+        for exp_date in option_dates:
+            dtt = datetime.datetime.strptime(exp_date, "%Y-%m-%d").date()
             # for a given stock ignore options more than 30 days away
-            if (dtt - dateutil.relativedelta.relativedelta(days=max_days_to_exp)) > currentDate:
+            if dtt > max_exp_date:
                 continue
+            dte = (dtt - currentDate).days
             try:
-                option_chains = StockUtils.getCallOptions(symbol, dt)
+                option_chains = StockUtils.getCallOptions(symbol, exp_date)
                 for row in option_chains:
                     # remove invalid option stikes (tradier api is reporting incorrect strikes for some)
                     if row['strike'] % 0.25 != 0:
@@ -124,10 +126,11 @@ class StockUtils():
                     # only consider in the money options
                     if row['strike'] > stock_curr_price:
                         continue
-                    if row['ask'] == 0 or row['bid'] == 0:
+                    print (row['strike'])
+                    if row['bid'] == 0:
                         call_price = row['last']
                     else:
-                        call_price = (row['ask'] + row['bid'])/2
+                        call_price = row['bid']
                     itm_percent = ((stock_curr_price - row['strike']) / row['strike']) * 100
                     effective_cost = stock_curr_price - call_price
                     max_profit = row['strike'] - effective_cost
@@ -142,7 +145,8 @@ class StockUtils():
 
                     # append this to final list
                     entry = {}
-                    entry['exp_date']       = dt
+                    entry['dte']            = dte
+                    entry['exp_date']       = exp_date
                     entry['symbol']         = symbol
                     entry['max_profit']     = max_profit
                     entry['call_price']     = call_price
@@ -175,24 +179,28 @@ class StockUtils():
                        industry_filter='none',
                        max_days_to_exp=30,
                        progress_recorder=None,
-                       debug_iterations=0):
+                       debug_iterations=0,
+                       tickers=[]):
         filters = []
         lst_size = 8 # resize ticker list into sublist of following size
         calculations = []
 
-        list_of_tickers = screener.objects.all().values()
-        # filter based on sector
-        if sector_filter != 'none':
-            list_of_tickers = [x for x in list_of_tickers if x['sector'] == sector_filter]
-        # filter based on industry
-        if industry_filter != 'none':
-            list_of_tickers = [x for x in list_of_tickers if x['industry'] == industry_filter]
-        # filter db rows, based on price (will also filter out invalid entries)
-        list_of_tickers = [x['symbol'] for x in list_of_tickers if x['price'] != 0 and x['price'] >= min_stock_price and x['price'] <= max_stock_price and x['options'] == True]
+        if not tickers:
+            list_of_tickers = screener.objects.all().values()
+            # filter based on sector
+            if sector_filter != 'none':
+                list_of_tickers = [x for x in list_of_tickers if x['sector'] == sector_filter]
+            # filter based on industry
+            if industry_filter != 'none':
+                list_of_tickers = [x for x in list_of_tickers if x['industry'] == industry_filter]
+            # filter db rows, based on price (will also filter out invalid entries)
+            list_of_tickers = [x['symbol'] for x in list_of_tickers if x['price'] != 0 and x['price'] >= min_stock_price and x['price'] <= max_stock_price and x['options'] == True]
 
-        list_of_tickers = [list_of_tickers[i * lst_size:(i + 1) * lst_size] for i in range((len(list_of_tickers) + lst_size - 1) // lst_size )]
-        if debug_iterations:
-            list_of_tickers = list_of_tickers[:debug_iterations]
+            list_of_tickers = [list_of_tickers[i * lst_size:(i + 1) * lst_size] for i in range((len(list_of_tickers) + lst_size - 1) // lst_size )]
+            if debug_iterations:
+                list_of_tickers = list_of_tickers[:debug_iterations]
+        else:
+            list_of_tickers = [tickers[i * lst_size:(i + 1) * lst_size] for i in range((len(tickers) + lst_size - 1) // lst_size )]
         length = len(list_of_tickers)
 
         for i in range(length):

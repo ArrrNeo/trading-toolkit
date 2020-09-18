@@ -5,8 +5,8 @@ Copyright (c) 2019 - present AppSeed.us
 """
 
 import os
+import re
 import json
-
 from django import template
 from django.db.models import Sum
 from django.template import loader
@@ -131,3 +131,50 @@ def covered_calls_screener_results(request):
 def db(request):
     table = screener.objects.all()
     return render(request, "db.html", {"table": table})
+
+def covered_calls(request):
+    ctx                  = {}
+    min_itm_pc           = 0
+    max_itm_pc           = 50
+    tickers_str          = ''
+    calculations         = []
+    max_days_to_exp      = 30
+    min_max_profit_pc    = 5
+
+    if request.method == 'POST':
+        min_itm_pc            = float(request.POST.get('min_itm_pc'))
+        max_itm_pc            = float(request.POST.get('max_itm_pc'))
+        max_days_to_exp       = int(request.POST.get('max_days_to_exp'))
+        min_max_profit_pc     = float(request.POST.get('min_max_profit_pc'))
+        tickers_str           = request.POST.get('tickers')
+        tickers               = re.split(',| ', tickers_str)
+        if '' in tickers:
+            tickers.remove('')
+        calculations = StockUtils.getCoveredCall(min_stock_price=0,
+                                                 max_stock_price=0,
+                                                 min_itm_pc=min_itm_pc,
+                                                 max_itm_pc=max_itm_pc,
+                                                 min_max_profit_pc=min_max_profit_pc,
+                                                 sector_filter='none',
+                                                 industry_filter='none',
+                                                 max_days_to_exp=max_days_to_exp,
+                                                 progress_recorder=None,
+                                                 debug_iterations=0,
+                                                 tickers=tickers)
+    print (calculations)
+    ctx['table']                = calculations
+    ctx['tickers']              = tickers_str
+    ctx['min_itm_pc']           = min_itm_pc
+    ctx['max_itm_pc']           = max_itm_pc
+    ctx['max_days_to_exp']      = max_days_to_exp
+    ctx['min_max_profit_pc']    = min_max_profit_pc
+    ctx['dte']                  = [ entry['dte']         for entry in calculations]
+    ctx['symbol']               = [ entry['symbol']         for entry in calculations]
+    ctx['strike']               = [ entry['strike']         for entry in calculations]
+    ctx['exp_date']             = [ entry['exp_date']       for entry in calculations]
+    ctx['max_profit']           = [ entry['max_profit']     for entry in calculations]
+    ctx['call_price']           = [ entry['call_price']     for entry in calculations]
+    ctx['curr_price']           = [ entry['curr_price']     for entry in calculations]
+    ctx['max_profit_pc']        = [ entry['max_profit_pc']  for entry in calculations]
+    ctx['effective_cost']       = [ entry['effective_cost'] for entry in calculations]
+    return render(request, 'covered_calls.html', ctx)

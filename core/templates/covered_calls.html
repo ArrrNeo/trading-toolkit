@@ -4,53 +4,46 @@
 <!-- Specific Plugin CSS goes HERE -->
 {% block plugin_stylesheets %}{% endblock plugin_stylesheets %}
 <!-- Specific CSS goes HERE -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}
+<link rel="stylesheet" type="text/css" href="/static/assets/css/app.css">
+{% endblock stylesheets %}
 {% block content %}
 
-<form action="/covered_calls_screener/" method="POST">
+<form action="/covered_calls/" method="POST">
   <div class="card">
     <div class="card-body">
       <h4 class="card-title">filters</h4>
       <table class="table table-bordered">
-        <thead>
+        <colgroup>
+          <col class="large" />
+          <col class="small" />
+          <col class="small" />
+          <col class="small" />
+          <col class="small" />
+          <col class="tiny" />
+        </colgroup>
+        <tbody>
           <tr>
-            <th> sector_filter </th>
-            <th> industry_filter </th>
-            <th> min_stock_price </th>
-            <th> max_stock_price </th>
+            <th> tickers </th>
             <th> min_itm_pc </th>
             <th> max_itm_pc </th>
             <th> min_max_profit_pc </th>
             <th> max_days_to_exp </th>
           </tr>
-        </thead>
-        <tbody>
           <tr>
-            <td>
-              <select id="sector_filter" name="sector_filter">
-                <option>Select Sector</option>
-              </select>
-            </td>
-            <td>
-              <select id="industry_filter" name="industry_filter">
-                <option>Select Industry</option>
-              </select>
-            </td>
-            <td> <input id="min_stock_price"   type="text"     name="min_stock_price"   value="{{ min_stock_price }}"> </td>
-            <td> <input id="max_stock_price"   type="text"     name="max_stock_price"   value="{{ max_stock_price }}"> </td>
+            <td> <input id="tickers"           type="text"     name="tickers"           value="{{ tickers }}"> </td>
             <td> <input id="min_itm_pc"        type="text"     name="min_itm_pc"        value="{{ min_itm_pc }}"> </td>
             <td> <input id="max_itm_pc"        type="text"     name="max_itm_pc"        value="{{ max_itm_pc }}"> </td>
             <td> <input id="min_max_profit_pc" type="text"     name="min_max_profit_pc" value="{{ min_max_profit_pc }}"> </td>
             <td> <input id="max_days_to_exp"   type="text"     name="max_days_to_exp"   value="{{ max_days_to_exp }}"> </td>
+            <th> <input type="submit" value="submit" name='submit'> </th>
           </tr>
         </tbody>
       </table>
-      <input type="submit" value="submit" name='submit'>
     </div>
   </div>
   {% csrf_token %}
   <!-- {{ form }} -->
-  <!-- commenting graph part right now -->
   <div class="content-wrapper">
     <div class="row stretch-card">
       <div class="card">
@@ -111,7 +104,7 @@
 <script>
   window.onload = function () {
     var idx             = 0;
-    var x               = {{ x              | safe }};
+    var dte             = {{ dte            | safe }};
     var symbol          = {{ symbol         | safe }};
     var strike          = {{ strike         | safe }};
     var exp_date        = {{ exp_date       | safe }};
@@ -120,55 +113,32 @@
     var curr_price      = {{ curr_price     | safe }};
     var max_profit_pc   = {{ max_profit_pc  | safe }};
     var effective_cost  = {{ effective_cost | safe }};
-    var sector_options   = {{ sector_options   | safe }};
-    var industry_options = {{ industry_options | safe }};
-    var sector_filter    = "{{ sector_filter    | safe }}";
-    var industry_filter  = "{{ industry_filter  | safe }}";
     var scatter_data    = [{
                               type            : "scatter",
-                              toolTipContent  : "sell {label} {a}c exp: {b}",
+                              toolTipContent  : "sell {symbol} {strike}c {exp} at {premium}<br/>effective_cost: {effective_cost}<br/>max_profit %: {y}<br/>days to expiry: {x}",
                               dataPoints      : []
                             }];
     var chart = new CanvasJS.Chart("chartContainer",
                                    {
-                                     animationEnabled   : true,
-                                     zoomEnabled        : true,
                                      title              : {text: "Max profit vs coverd call"},
-                                     axisX              : {title:"ticker"},
+                                     axisX              : {title:"days to expiry", tickLength: 1, tickColor: "red", tickThickness: 2},
                                      axisY              : {logarithmic: true, title: "Max profit percentage"},
                                      data               : scatter_data,
                                    }
                                   );
     for (idx = 0; idx < symbol.length; ++idx) {
       chart.options.data[0].dataPoints.push({
-                                              label : symbol[idx],
-                                              x     : x[idx],
-                                              y     : max_profit_pc[idx],
-                                              a     : strike[idx],
-                                              b     : exp_date[idx]
+                                              x              : dte[idx],
+                                              y              : max_profit_pc[idx],
+                                              exp            : exp_date[idx],
+                                              symbol         : symbol[idx],
+                                              strike         : strike[idx],
+                                              premium        : call_price[idx],
+                                              stock_price    : curr_price[idx],
+                                              effective_cost : effective_cost[idx],
                                             });
     }
     chart.render();
-
-    sector_options.forEach( function(item) {
-      var el = document.createElement("option");
-      el.text = item;
-      el.value = item;
-      if (sector_filter == item) {
-        el.selected = true;
-      }
-      document.getElementById("sector_filter").appendChild(el);
-    });
-
-    industry_options.forEach( function(item) {
-      var el = document.createElement("option");
-      el.text = item;
-      el.value = item;
-      if (industry_filter == item) {
-        el.selected = true;
-      }
-      document.getElementById("industry_filter").appendChild(el);
-    });
   }
 </script>
 {% endblock javascripts %}

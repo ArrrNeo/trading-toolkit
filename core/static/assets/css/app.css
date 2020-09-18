@@ -21,3 +21,31 @@ body > * {
 #pie-chart {
   width: 100%;
 }
+
+table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+input[type=text] {
+  width: 100%;
+  display: block;
+}
+
+.large {
+  width: 54%;
+}
+
+.small {
+  width: 10%;
+}
+
+.tiny {
+  width: 6%;
+}
+
+/* see me */
+td {
+  border: solid;
+}
+

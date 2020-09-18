@@ -51,10 +51,10 @@ def asyn_cc_chart(self,
                                              industry_filter=industry_filter,
                                              max_days_to_exp=max_days_to_exp,
                                              progress_recorder=progress_recorder,
-                                             debug_iterations=debug_iterations)
+                                             debug_iterations=debug_iterations,
+                                             tickers=[])
     ctx                         = {}
     ctx['status']               = 'Done'
-    ctx['y_axis']               = 'symbol'
     ctx['min_itm_pc']           = min_itm_pc
     ctx['max_itm_pc']           = max_itm_pc
     ctx['table']                = calculations
@@ -62,7 +62,6 @@ def asyn_cc_chart(self,
     ctx['max_stock_price']      = max_stock_price
     ctx['max_days_to_exp']      = max_days_to_exp
     ctx['min_max_profit_pc']    = min_max_profit_pc
-    ctx['x_axis']               = 'max_profit_percentage'
     ctx['symbol']               = [ entry['symbol']         for entry in calculations]
 
     lst_of_unique = list(set(ctx['symbol']))
