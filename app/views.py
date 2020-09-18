@@ -178,3 +178,48 @@ def covered_calls(request):
     ctx['max_profit_pc']        = [ entry['max_profit_pc']  for entry in calculations]
     ctx['effective_cost']       = [ entry['effective_cost'] for entry in calculations]
     return render(request, 'covered_calls.html', ctx)
+
+def cash_secured_puts(request):
+    ctx                               = {}
+    tickers_str                       = ''
+    calculations                      = []
+    max_days_to_exp                   = 30
+    max_otm_percent                   = 40
+    max_itm_percent                   = 0
+    min_premium_to_collatral_ratio    = 2
+
+    if request.method == 'POST':
+        max_days_to_exp                = int(request.POST.get('max_days_to_exp'))
+        max_otm_percent                = float(request.POST.get('max_otm_percent'))
+        max_itm_percent                = float(request.POST.get('max_itm_percent'))
+        tickers_str                    = request.POST.get('tickers')
+        tickers                        = re.split(',| ', tickers_str)
+        if '' in tickers:
+            tickers.remove('')
+        min_premium_to_collatral_ratio = float(request.POST.get('min_premium_to_collatral_ratio'))
+        calculations = StockUtils.CashSecuredPuts(tickers=tickers,
+                                                  max_days_to_exp=max_days_to_exp,
+                                                  max_otm_percent=max_otm_percent,
+                                                  max_itm_percent=max_itm_percent,
+                                                  min_premium_to_collatral_ratio=min_premium_to_collatral_ratio)
+    ctx['tickers']                        = tickers_str
+    ctx['max_days_to_exp']                = max_days_to_exp
+    ctx['max_otm_percent']                = max_otm_percent
+    ctx['max_itm_percent']                = max_itm_percent
+    ctx['min_premium_to_collatral_ratio'] = min_premium_to_collatral_ratio
+    ctx['iv']                             = [ entry['iv']                         for entry in calculations ]
+    ctx['dte']                            = [ entry['dte']                        for entry in calculations ]
+    ctx['delta']                          = [ entry['delta']                      for entry in calculations ]
+    ctx['theta']                          = [ entry['theta']                      for entry in calculations ]
+    ctx['symbol']                         = [ entry['symbol']                     for entry in calculations ]
+    ctx['strike']                         = [ entry['strike']                     for entry in calculations ]
+    ctx['premium']                        = [ entry['premium']                    for entry in calculations ]
+    ctx['exp_date']                       = [ entry['exp_date']                   for entry in calculations ]
+    ctx['curr_price']                     = [ entry['curr_price']                 for entry in calculations ]
+    ctx['otm_percent']                    = [ entry['otm_percent']                for entry in calculations ]
+    ctx['annual_return']                  = [ entry['annual_return']              for entry in calculations ]
+    ctx['ownership_cost']                 = [ entry['ownership_cost']             for entry in calculations ]
+    ctx['drop_to_loss_percent']           = [ entry['drop_to_loss_percent']       for entry in calculations ]
+    ctx['premium_to_collatral_ratio']     = [ entry['premium_to_collatral_ratio'] for entry in calculations ]
+
+    return render(request, 'cash_secured_puts.html', ctx)

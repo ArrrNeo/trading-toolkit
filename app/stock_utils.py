@@ -38,6 +38,18 @@ class StockUtils():
             return [x for x in response['options']['option'] if x['option_type'] == 'call']
         except Exception as e:
             return []
+
+    @staticmethod
+    # get stock info from yahoo finance
+    def getPutOptions(ticker, exp_date):
+        try:
+            tradier_key = os.environ.get('TRADIER_KEY')
+            response = requests.get('https://sandbox.tradier.com/v1/markets/options/chains',
+                                params={'symbol': ticker, 'expiration': exp_date, 'greeks': 'true'},
+                                headers={'Authorization': 'Bearer ' + tradier_key, 'Accept': 'application/json'}).json()
+            return [x for x in response['options']['option'] if x['option_type'] == 'put']
+        except Exception as e:
+            return []
     
     @staticmethod
     # get stock info from yahoo finance
@@ -214,6 +226,98 @@ class StockUtils():
                 progress_recorder.set_progress(i + 1, length, f'On iteration {i}')
 
         return calculations
+
+    @staticmethod
+    # get info for covered call chart
+    def CashSecuredPuts(tickers,
+                        max_days_to_exp,
+                        max_itm_percent,
+                        max_otm_percent,
+                        min_premium_to_collatral_ratio):
+        calculations = []
+        for symbol in tickers:
+            StockUtils.CashSecuredPuts_helper_func_1(symbol,
+                                                     max_days_to_exp,
+                                                     max_itm_percent,                   # filter: percentage increase required puts to be OTM
+                                                     max_otm_percent,                   # filter: percentage drop required puts to be ITM
+                                                     min_premium_to_collatral_ratio,    # filter: in percentage
+                                                     calculations)
+        return calculations
+
+    @staticmethod
+    def CashSecuredPuts_helper_func_1(symbol,
+                                      max_days_to_exp,                  # filter: number of days to exp
+                                      max_itm_percent,                  # filter: percentage increase required puts to be OTM
+                                      max_otm_percent,                  # filter: percentage drop required puts to be ITM
+                                      min_premium_to_collatral_ratio,   # filter: in percentage
+                                      calculations):
+        stock_curr_price = StockUtils.getCurrentPrice(symbol)
+        if stock_curr_price == 0:
+            return
+
+        currentDate  = datetime.date.today()
+        max_exp_date = currentDate + dateutil.relativedelta.relativedelta(days=max_days_to_exp)
+        option_dates = StockUtils.getOptionsDate(symbol)
+        for exp_date in option_dates:
+            dtt = datetime.datetime.strptime(exp_date, "%Y-%m-%d").date()
+            # for a given stock ignore options more than 30 days away
+            if dtt > max_exp_date:
+                continue
+            dte = (dtt - currentDate).days
+            try:
+                option_chains = StockUtils.getPutOptions(symbol, exp_date)
+                max_strike = (stock_curr_price * (100 + max_itm_percent) / 100)
+                min_strike = (stock_curr_price * (100 - max_otm_percent) / 100)
+                # filter by min/max strike price, invalid option stikes (tradier api is reporting incorrect strikes for some)
+                option_chains = [x for x in option_chains if x['strike'] % 0.25 == 0 and x['strike'] >= min_strike and x['strike'] <= max_strike ]
+                for row in option_chains:
+                    strike = row['strike']
+                    try:
+                        delta = row['greeks']['delta']
+                        theta = row['greeks']['theta']
+                        iv = row['greeks']['mid_iv']
+                    except Exception as e:
+                        delta = 0
+                        theta = 0
+                        iv = 0
+                    if row['bid'] == 0:
+                        premium = row['last']
+                    else:
+                        premium = row['bid']
+                    if not premium:
+                        continue
+
+                    premium_to_collatral_ratio = (premium / strike) * 100
+                    if premium_to_collatral_ratio < min_premium_to_collatral_ratio:
+                        continue
+
+                    otm_percent = ((stock_curr_price - strike) / stock_curr_price) * 100
+                    ownership_cost = strike - premium
+                    if ownership_cost > stock_curr_price:
+                        continue
+                    drop_to_loss_percent = ((stock_curr_price - ownership_cost) / stock_curr_price) * 100
+
+                    annual_return = (premium_to_collatral_ratio / dte) * 365
+                    # append this to final list
+                    entry                                = {}
+                    entry['dte']                         = dte
+                    entry['iv']                          = iv * 100
+                    entry['delta']                       = delta
+                    entry['theta']                       = theta
+                    entry['symbol']                      = symbol
+                    entry['strike']                      = strike
+                    entry['premium']                     = premium
+                    entry['exp_date']                    = exp_date
+                    entry['otm_percent']                 = otm_percent
+                    entry['annual_return']               = annual_return
+                    entry['ownership_cost']              = ownership_cost
+                    entry['curr_price']                  = stock_curr_price
+                    entry['drop_to_loss_percent']        = drop_to_loss_percent
+                    entry['premium_to_collatral_ratio']  = premium_to_collatral_ratio
+                    calculations.append(entry)
+            except Exception as e:
+                print (e)
+                pass
 
     @staticmethod
     # get basic info for all stock tickers for the purpose of screener
