@@ -15,9 +15,7 @@ urlpatterns = [
     # The home page
     path('', views.debit_spread_chart, name='debit_spread_chart'),
     path('debit_spread_chart/', views.debit_spread_chart, name='debit_spread_chart'),
-    path('covered_calls/', views.covered_calls, name='covered_calls'),
-    path('cash_secured_puts/', views.cash_secured_puts, name='cash_secured_puts'),
-    path('covered_calls_screener/', views.covered_calls_screener, name='covered_calls_screener'),
-    path('covered_calls_screener_results/', views.covered_calls_screener_results, name='covered_calls_screener_results'),
+    path('sell_options_chart/', views.sell_options_chart, name='sell_options_chart'),
+    path('sell_options_result/', views.sell_options_result, name='sell_options_result'),
     path("db/", views.db, name="db"),
 ]

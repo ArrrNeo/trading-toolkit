@@ -32,16 +32,56 @@ input[type=text] {
   display: block;
 }
 
-.large {
-  width: 54%;
+.two-zero {
+  width: 20%;
 }
 
-.small {
+.one-nine {
+  width: 19%;
+}
+
+.one-eight {
+  width: 18%;
+}
+
+.fifteen {
+  width: 15%;
+}
+
+.one-three {
+  width: 13%;
+}
+
+.one-two {
+  width: 12%;
+}
+
+.onezero {
   width: 10%;
 }
 
-.tiny {
+.eight {
+  width: 8%;
+}
+
+.seven {
+  width: 7%;
+}
+
+.six {
   width: 6%;
+}
+
+.five {
+  width: 5%;
+}
+
+.four {
+  width: 4%;
+}
+
+.three {
+  width: 3%;
 }
 
 /* see me */

@@ -23,7 +23,7 @@
         function customResult(resultElement, result)
         {
             $(resultElement).append($('<p>').text('Sum of all seconds is ' + result));
-            window.location.replace('/covered_calls_screener_results/?task_id={{task_id}}');
+            window.location.replace('/sell_options_result/?task_id={{task_id}}');
         }
         CeleryProgressBar.initProgressBar(progressUrl, { onResult: customResult, })
 

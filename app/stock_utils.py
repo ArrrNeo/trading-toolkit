@@ -29,6 +29,18 @@ class StockUtils():
 
     @staticmethod
     # get stock info from yahoo finance
+    def getOptions(ticker, exp_date):
+        try:
+            tradier_key = os.environ.get('TRADIER_KEY')
+            response = requests.get('https://sandbox.tradier.com/v1/markets/options/chains',
+                                params={'symbol': ticker, 'expiration': exp_date, 'greeks': 'true'},
+                                headers={'Authorization': 'Bearer ' + tradier_key, 'Accept': 'application/json'}).json()
+            return response['options']['option']
+        except Exception as e:
+            return []
+
+    @staticmethod
+    # get stock info from yahoo finance
     def getCallOptions(ticker, exp_date):
         try:
             tradier_key = os.environ.get('TRADIER_KEY')
@@ -115,211 +127,6 @@ class StockUtils():
         return ctx
 
     @staticmethod
-    def CoveredCall_helper_func_2(symbol, calculations, min_itm_pc, max_itm_pc, min_max_profit_pc, max_days_to_exp):
-        stock_curr_price = StockUtils.getCurrentPrice(symbol)
-        if stock_curr_price == 0:
-            return
-
-        currentDate  = datetime.date.today()
-        max_exp_date = currentDate + dateutil.relativedelta.relativedelta(days=max_days_to_exp)
-        option_dates = StockUtils.getOptionsDate(symbol)
-        for exp_date in option_dates:
-            dtt = datetime.datetime.strptime(exp_date, "%Y-%m-%d").date()
-            # for a given stock ignore options more than 30 days away
-            if dtt > max_exp_date:
-                continue
-            dte = (dtt - currentDate).days
-            try:
-                option_chains = StockUtils.getCallOptions(symbol, exp_date)
-                for row in option_chains:
-                    # remove invalid option stikes (tradier api is reporting incorrect strikes for some)
-                    if row['strike'] % 0.25 != 0:
-                        continue
-                    # only consider in the money options
-                    if row['strike'] > stock_curr_price:
-                        continue
-                    print (row['strike'])
-                    if row['bid'] == 0:
-                        call_price = row['last']
-                    else:
-                        call_price = row['bid']
-                    itm_percent = ((stock_curr_price - row['strike']) / row['strike']) * 100
-                    effective_cost = stock_curr_price - call_price
-                    max_profit = row['strike'] - effective_cost
-                    max_profit_pc = (max_profit / effective_cost) *  100
-                    # filter based on in the money percentage
-                    if itm_percent < min_itm_pc or itm_percent > max_itm_pc:
-                        continue
-
-                    # filter based on max profit percentage
-                    if max_profit_pc < min_max_profit_pc:
-                        continue
-
-                    # append this to final list
-                    entry = {}
-                    entry['dte']            = dte
-                    entry['exp_date']       = exp_date
-                    entry['symbol']         = symbol
-                    entry['max_profit']     = max_profit
-                    entry['call_price']     = call_price
-                    entry['strike']         = row['strike']
-                    entry['max_profit_pc']  = max_profit_pc
-                    entry['effective_cost'] = effective_cost
-                    entry['curr_price']     = stock_curr_price
-                    calculations.append(entry)
-            except Exception as e:
-                pass
-
-    @staticmethod
-    def CoveredCall_helper_func_1(tickers, calculations, min_itm_pc, max_itm_pc, min_max_profit_pc, max_days_to_exp):
-        for stock in tickers:
-            StockUtils.CoveredCall_helper_func_2(stock,
-                                                 calculations,
-                                                 min_itm_pc,
-                                                 max_itm_pc,
-                                                 min_max_profit_pc,
-                                                 max_days_to_exp)
-
-    @staticmethod
-    # get info for covered call chart
-    def getCoveredCall(min_stock_price=0,
-                       max_stock_price=5,
-                       min_itm_pc=0,
-                       max_itm_pc=50,
-                       min_max_profit_pc=5,
-                       sector_filter='none',
-                       industry_filter='none',
-                       max_days_to_exp=30,
-                       progress_recorder=None,
-                       debug_iterations=0,
-                       tickers=[]):
-        filters = []
-        lst_size = 8 # resize ticker list into sublist of following size
-        calculations = []
-
-        if not tickers:
-            list_of_tickers = screener.objects.all().values()
-            # filter based on sector
-            if sector_filter != 'none':
-                list_of_tickers = [x for x in list_of_tickers if x['sector'] == sector_filter]
-            # filter based on industry
-            if industry_filter != 'none':
-                list_of_tickers = [x for x in list_of_tickers if x['industry'] == industry_filter]
-            # filter db rows, based on price (will also filter out invalid entries)
-            list_of_tickers = [x['symbol'] for x in list_of_tickers if x['price'] != 0 and x['price'] >= min_stock_price and x['price'] <= max_stock_price and x['options'] == True]
-
-            list_of_tickers = [list_of_tickers[i * lst_size:(i + 1) * lst_size] for i in range((len(list_of_tickers) + lst_size - 1) // lst_size )]
-            if debug_iterations:
-                list_of_tickers = list_of_tickers[:debug_iterations]
-        else:
-            list_of_tickers = [tickers[i * lst_size:(i + 1) * lst_size] for i in range((len(tickers) + lst_size - 1) // lst_size )]
-        length = len(list_of_tickers)
-
-        for i in range(length):
-            StockUtils.CoveredCall_helper_func_1(list_of_tickers[i],
-                                                 calculations,
-                                                 min_itm_pc,
-                                                 max_itm_pc,
-                                                 min_max_profit_pc,
-                                                 max_days_to_exp)
-            if progress_recorder:
-                progress_recorder.set_progress(i + 1, length, f'On iteration {i}')
-
-        return calculations
-
-    @staticmethod
-    # get info for covered call chart
-    def CashSecuredPuts(tickers,
-                        max_days_to_exp,
-                        max_itm_percent,
-                        max_otm_percent,
-                        min_premium_to_collatral_ratio):
-        calculations = []
-        for symbol in tickers:
-            StockUtils.CashSecuredPuts_helper_func_1(symbol,
-                                                     max_days_to_exp,
-                                                     max_itm_percent,                   # filter: percentage increase required puts to be OTM
-                                                     max_otm_percent,                   # filter: percentage drop required puts to be ITM
-                                                     min_premium_to_collatral_ratio,    # filter: in percentage
-                                                     calculations)
-        return calculations
-
-    @staticmethod
-    def CashSecuredPuts_helper_func_1(symbol,
-                                      max_days_to_exp,                  # filter: number of days to exp
-                                      max_itm_percent,                  # filter: percentage increase required puts to be OTM
-                                      max_otm_percent,                  # filter: percentage drop required puts to be ITM
-                                      min_premium_to_collatral_ratio,   # filter: in percentage
-                                      calculations):
-        stock_curr_price = StockUtils.getCurrentPrice(symbol)
-        if stock_curr_price == 0:
-            return
-
-        currentDate  = datetime.date.today()
-        max_exp_date = currentDate + dateutil.relativedelta.relativedelta(days=max_days_to_exp)
-        option_dates = StockUtils.getOptionsDate(symbol)
-        for exp_date in option_dates:
-            dtt = datetime.datetime.strptime(exp_date, "%Y-%m-%d").date()
-            # for a given stock ignore options more than 30 days away
-            if dtt > max_exp_date:
-                continue
-            dte = (dtt - currentDate).days
-            try:
-                option_chains = StockUtils.getPutOptions(symbol, exp_date)
-                max_strike = (stock_curr_price * (100 + max_itm_percent) / 100)
-                min_strike = (stock_curr_price * (100 - max_otm_percent) / 100)
-                # filter by min/max strike price, invalid option stikes (tradier api is reporting incorrect strikes for some)
-                option_chains = [x for x in option_chains if x['strike'] % 0.25 == 0 and x['strike'] >= min_strike and x['strike'] <= max_strike ]
-                for row in option_chains:
-                    strike = row['strike']
-                    try:
-                        delta = row['greeks']['delta']
-                        theta = row['greeks']['theta']
-                        iv = row['greeks']['mid_iv']
-                    except Exception as e:
-                        delta = 0
-                        theta = 0
-                        iv = 0
-                    if row['bid'] == 0:
-                        premium = row['last']
-                    else:
-                        premium = row['bid']
-                    if not premium:
-                        continue
-
-                    premium_to_collatral_ratio = (premium / strike) * 100
-                    if premium_to_collatral_ratio < min_premium_to_collatral_ratio:
-                        continue
-
-                    otm_percent = ((stock_curr_price - strike) / stock_curr_price) * 100
-                    ownership_cost = strike - premium
-                    if ownership_cost > stock_curr_price:
-                        continue
-                    drop_to_loss_percent = ((stock_curr_price - ownership_cost) / stock_curr_price) * 100
-
-                    annual_return = (premium_to_collatral_ratio / dte) * 365
-                    # append this to final list
-                    entry                                = {}
-                    entry['dte']                         = dte
-                    entry['iv']                          = iv * 100
-                    entry['delta']                       = delta
-                    entry['theta']                       = theta
-                    entry['symbol']                      = symbol
-                    entry['strike']                      = strike
-                    entry['premium']                     = premium
-                    entry['exp_date']                    = exp_date
-                    entry['otm_percent']                 = otm_percent
-                    entry['annual_return']               = annual_return
-                    entry['ownership_cost']              = ownership_cost
-                    entry['curr_price']                  = stock_curr_price
-                    entry['drop_to_loss_percent']        = drop_to_loss_percent
-                    entry['premium_to_collatral_ratio']  = premium_to_collatral_ratio
-                    calculations.append(entry)
-            except Exception as e:
-                print (e)
-                pass
-
-    @staticmethod
     # get basic info for all stock tickers for the purpose of screener
     def populateScreener():
         total_list_of_tickers = NasdaqController(True).getList()
@@ -401,3 +208,193 @@ class StockUtils():
             else:
                 screener.objects.update_or_create(symbol=ticker, defaults={ 'options': False })
         return
+
+    @staticmethod
+    # get info for covered call chart
+    def SellOptions(tickers,
+                    sell_calls,       # filter: should calls be considered
+                    sell_puts,        # filter: should puts be considered
+                    max_days_to_exp,  # filter: number of days to exp
+                    min_strike_pc,    # filter: percentage min strike is away from current price
+                    max_strike_pc,    # filter: percentage max strike is away from current price
+                    min_profit_pc,    # filter: profit to collatral percentage
+                    progress_recorder=None):
+        calculations = []
+        num_sym = len(tickers)
+        ctr = 0
+        for symbol in tickers:
+            StockUtils.SellOptions_helper_func_1(symbol,
+                                                 sell_calls,
+                                                 sell_puts,
+                                                 max_days_to_exp,
+                                                 min_strike_pc,
+                                                 max_strike_pc,
+                                                 min_profit_pc,
+                                                 calculations)
+            if progress_recorder:
+                progress_recorder.set_progress(ctr + 1, num_sym, f'On iteration {ctr}')
+            ctr = ctr + 1
+        return calculations
+
+    @staticmethod
+    def SellOptions_helper_func_1(symbol,
+                                  sell_calls,       # filter: should calls be considered
+                                  sell_puts,        # filter: should puts be considered
+                                  max_days_to_exp,  # filter: number of days to exp
+                                  min_strike_pc,    # filter: percentage min strike is away from current price
+                                  max_strike_pc,    # filter: percentage max strike is away from current price
+                                  min_profit_pc,    # filter: profit to collatral percentage
+                                  calculations):
+        curr_price = StockUtils.getCurrentPrice(symbol)
+        if curr_price == 0:
+            return
+
+        min_strike = (curr_price * (100 - min_strike_pc) / 100)
+        max_strike = (curr_price * (100 + max_strike_pc) / 100)
+
+        currentDate  = datetime.date.today()
+        max_exp_date = currentDate + dateutil.relativedelta.relativedelta(days=max_days_to_exp)
+
+        option_dates = StockUtils.getOptionsDate(symbol)
+        for exp_date in option_dates:
+            dtt = datetime.datetime.strptime(exp_date, "%Y-%m-%d").date()
+            # for a given stock ignore options more than 30 days away
+            if dtt > max_exp_date:
+                continue
+            dte = (dtt - currentDate).days
+            # get all options
+            option_chains = StockUtils.getOptions(symbol, exp_date)
+            # filter by min/max strike price, invalid option stikes (tradier api is reporting incorrect strikes for some)
+            option_chains = [x for x in option_chains if x['strike'] % 0.25 == 0 and x['strike'] >= min_strike and x['strike'] <= max_strike ]
+            for row in option_chains:
+                entry = {}
+                if row['bid'] == 0:
+                    premium = row['last']
+                else:
+                    premium = row['bid']
+                if not premium:
+                    continue
+                strike = row['strike']
+                if sell_calls and row['option_type'] == 'call':
+                    entry = StockUtils.ProcessSellCall(strike, curr_price, premium, min_profit_pc, dte)
+                elif sell_puts and row['option_type'] == 'put':
+                    entry = StockUtils.ProcessSellPut(strike, curr_price, premium, min_profit_pc, dte)
+                if not entry:
+                    continue
+                StockUtils.PopulateGreeks(entry, row)
+                # append this to final list
+                entry['dte']      = dte
+                entry['symbol']   = symbol
+                entry['exp_date'] = exp_date
+                calculations.append(entry)
+
+    @staticmethod
+    def PopulateGreeks(entry, row):
+        try:
+            entry['delta'] = row['greeks']['delta']
+            entry['theta'] = row['greeks']['theta']
+            entry['iv']    = row['greeks']['mid_iv'] * 100
+        except Exception as e:
+            entry['delta'] = 0
+            entry['theta'] = 0
+            entry['iv']    = 0
+
+    @staticmethod
+    def ProcessSellCall(strike, curr_price, premium, min_profit_pc, dte):
+        entry = {}
+        if dte == 0:
+            dte = 1
+        try:
+            collatral = curr_price
+
+            itm_percent = ((curr_price - strike) / curr_price) * 100
+            ownership_cost = curr_price - premium
+
+            # profit if stock price remains the same
+            if strike < curr_price:
+                profit = strike - ownership_cost
+            else:
+                profit = premium
+
+            profit_pc = (profit / collatral) * 100
+            if profit_pc < min_profit_pc:
+                return {}
+
+            # max profit for selling calls will be strike_price - ownership_cost (when calls are excercised)
+            max_profit = strike - ownership_cost
+            max_profit_pc = (max_profit / collatral) * 100
+            # for selling calls, drop in price of stock by more than premium recvd will lead to loss
+            percent_drop_before_loss = (premium / curr_price) * 100
+
+            # annual return of price stays same
+            annual_return = (profit_pc / dte) * 365
+            # annual return of price goes beyond
+            annual_max_return = (max_profit_pc / dte) * 365
+
+            entry['type']                     = 'c'
+            entry['strike']                   = strike
+            entry['premium']                  = premium
+            entry['profit_pc']                = profit_pc
+            entry['curr_price']               = curr_price
+            entry['itm_percent']              = itm_percent
+            entry['annual_return']            = annual_return
+            entry['max_profit_pc']            = max_profit_pc
+            entry['ownership_cost']           = ownership_cost
+            entry['annual_max_return']        = annual_max_return
+            entry['percent_drop_before_loss'] = percent_drop_before_loss
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+        return entry
+
+    @staticmethod
+    def ProcessSellPut(strike, curr_price, premium, min_profit_pc, dte):
+        entry = {}
+        if dte == 0:
+            dte = 1
+        try:
+            collatral = strike
+
+            itm_percent = ((strike - curr_price) / curr_price) * 100
+            ownership_cost = strike - premium
+            if ownership_cost > curr_price:
+                return {}
+
+            # profit if stock price remains the same
+            if strike > curr_price:
+                profit = curr_price - ownership_cost
+            else:
+                profit = premium
+
+            profit_pc = (profit / collatral) * 100
+            if profit_pc < min_profit_pc:
+                return {}
+
+            # max profit for selling puts will be premium (when put expires worthless)
+            max_profit = premium
+            max_profit_pc = (max_profit / collatral) * 100
+            # for selling puts, after price drops beyond ownership cost loss will happen
+            percent_drop_before_loss = ((curr_price - ownership_cost) / curr_price) * 100
+
+            # annual return of price stays same
+            annual_return = (profit_pc / dte) * 365
+            # annual return of price goes beyond
+            annual_max_return = (max_profit_pc / dte) * 365
+
+            entry['type']                     = 'p'
+            entry['strike']                   = strike
+            entry['premium']                  = premium
+            entry['profit_pc']                = profit_pc
+            entry['curr_price']               = curr_price
+            entry['itm_percent']              = itm_percent
+            entry['annual_return']            = annual_return
+            entry['max_profit_pc']            = max_profit_pc
+            entry['ownership_cost']           = ownership_cost
+            entry['annual_max_return']        = annual_max_return
+            entry['percent_drop_before_loss'] = percent_drop_before_loss
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+        return entry

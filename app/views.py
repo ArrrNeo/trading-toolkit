@@ -16,7 +16,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from celery.result import AsyncResult
 
-from app.tasks import asyn_cc_chart
+from app.tasks import asyn_sell_options
 from app.stock_utils import StockUtils
 from app.models import screener
 
@@ -54,77 +54,11 @@ def debit_spread_chart(request):
     ctx = StockUtils.getDebitSpreads(ticker, option_date, num_strikes, log_scale, min_profit_pc)
     return render(request, 'debit_spread_chart.html', ctx)
 
-def covered_calls_screener(request):
-    ctx                  = {}
-    min_itm_pc           = 0
-    max_itm_pc           = 50
-    max_days_to_exp      = 30
-    min_stock_price      = 3
-    max_stock_price      = 5
-    min_max_profit_pc    = 20
-
-    if request.method == 'POST':
-        min_itm_pc            = float(request.POST.get('min_itm_pc'))
-        max_itm_pc            = float(request.POST.get('max_itm_pc'))
-        max_days_to_exp       = int(request.POST.get('max_days_to_exp'))
-        min_max_profit_pc     = float(request.POST.get('min_max_profit_pc'))
-        min_stock_price       = float(request.POST.get('min_stock_price'))
-        max_stock_price       = float(request.POST.get('max_stock_price'))
-        sector_filter         = request.POST.get('sector_filter')
-        industry_filter       = request.POST.get('industry_filter')
-        if sector_filter == 'Select Sector':
-            sector_filter = 'none'
-        if industry_filter == 'Select Industry':
-            industry_filter = 'none'
-
-        task = asyn_cc_chart.delay(min_stock_price=min_stock_price,
-                                   max_stock_price=max_stock_price,
-                                   min_itm_pc=min_itm_pc,
-                                   max_itm_pc=max_itm_pc,
-                                   min_max_profit_pc=min_max_profit_pc,
-                                   sector_filter=sector_filter,
-                                   industry_filter=industry_filter,
-                                   max_days_to_exp=max_days_to_exp,
-                                   debug_iterations=0)
-
-        return render(request, 'covered_calls_screener_progress.html', { 'task_id' : task.task_id })
-    else:
-        tickers = screener.objects.all().values()
-        sector_options = list(set([x['sector'] for x in tickers]))
-        sector_options.remove('')
-        industry_options = list(set([x['industry'] for x in tickers]))
-        industry_options.remove('')
-        ctx['min_itm_pc']           = min_itm_pc
-        ctx['max_itm_pc']           = max_itm_pc
-        ctx['min_stock_price']      = min_stock_price
-        ctx['max_stock_price']      = max_stock_price
-        ctx['max_days_to_exp']      = max_days_to_exp
-        ctx['min_max_profit_pc']    = min_max_profit_pc
-        ctx['x']                    = []
-        ctx['table']                = []
-        ctx['symbol']               = []
-        ctx['strike']               = []
-        ctx['exp_date']             = []
-        ctx['max_profit']           = []
-        ctx['call_price']           = []
-        ctx['curr_price']           = []
-        ctx['max_profit_pc']        = []
-        ctx['effective_cost']       = []
-        ctx['y_axis']               = 'symbol'
-        ctx['x_axis']               = 'max_profit_percentage'
-        ctx['sector_options']       = sector_options
-        ctx['industry_options']     = industry_options
-        ctx['sector_filter']        = 'none'
-        ctx['industry_filter']      = 'none'
-        return render(request, 'covered_calls_screener_results.html', ctx)
-
-def covered_calls_screener_results(request):
-    print (request)
+def sell_options_result(request):
     task_id = request.GET.get('task_id', None)
     if task_id is not None:
         task = AsyncResult(task_id)
-        return render(request, 'covered_calls_screener_results.html', task.result)
-        # return HttpResponse(json.dumps(task.result), content_type='application/json')
+        return render(request, 'sell_options_chart.html', task.result)
     else:
         return HttpResponse('No job id given.')
 
@@ -132,94 +66,118 @@ def db(request):
     table = screener.objects.all()
     return render(request, "db.html", {"table": table})
 
-def covered_calls(request):
-    ctx                  = {}
-    min_itm_pc           = 0
-    max_itm_pc           = 50
-    tickers_str          = ''
-    calculations         = []
-    max_days_to_exp      = 30
-    min_max_profit_pc    = 5
-
-    if request.method == 'POST':
-        min_itm_pc            = float(request.POST.get('min_itm_pc'))
-        max_itm_pc            = float(request.POST.get('max_itm_pc'))
-        max_days_to_exp       = int(request.POST.get('max_days_to_exp'))
-        min_max_profit_pc     = float(request.POST.get('min_max_profit_pc'))
-        tickers_str           = request.POST.get('tickers')
-        tickers               = re.split(',| ', tickers_str)
-        if '' in tickers:
-            tickers.remove('')
-        calculations = StockUtils.getCoveredCall(min_stock_price=0,
-                                                 max_stock_price=0,
-                                                 min_itm_pc=min_itm_pc,
-                                                 max_itm_pc=max_itm_pc,
-                                                 min_max_profit_pc=min_max_profit_pc,
-                                                 sector_filter='none',
-                                                 industry_filter='none',
-                                                 max_days_to_exp=max_days_to_exp,
-                                                 progress_recorder=None,
-                                                 debug_iterations=0,
-                                                 tickers=tickers)
-    print (calculations)
-    ctx['table']                = calculations
-    ctx['tickers']              = tickers_str
-    ctx['min_itm_pc']           = min_itm_pc
-    ctx['max_itm_pc']           = max_itm_pc
-    ctx['max_days_to_exp']      = max_days_to_exp
-    ctx['min_max_profit_pc']    = min_max_profit_pc
-    ctx['dte']                  = [ entry['dte']         for entry in calculations]
-    ctx['symbol']               = [ entry['symbol']         for entry in calculations]
-    ctx['strike']               = [ entry['strike']         for entry in calculations]
-    ctx['exp_date']             = [ entry['exp_date']       for entry in calculations]
-    ctx['max_profit']           = [ entry['max_profit']     for entry in calculations]
-    ctx['call_price']           = [ entry['call_price']     for entry in calculations]
-    ctx['curr_price']           = [ entry['curr_price']     for entry in calculations]
-    ctx['max_profit_pc']        = [ entry['max_profit_pc']  for entry in calculations]
-    ctx['effective_cost']       = [ entry['effective_cost'] for entry in calculations]
-    return render(request, 'covered_calls.html', ctx)
-
-def cash_secured_puts(request):
+def sell_options_chart(request):
     ctx                               = {}
-    tickers_str                       = ''
+    tickers_str                       = 'TSLA'
     calculations                      = []
+    sell_calls                        = False
+    sell_puts                         = True
+    min_price                         = 0
+    max_price                         = 0
+    min_strike_pc                     = 20
+    max_strike_pc                     = 20
+    min_profit_pc                     = 1
     max_days_to_exp                   = 30
-    max_otm_percent                   = 40
-    max_itm_percent                   = 0
-    min_premium_to_collatral_ratio    = 2
+    sector_selected                   = 'none'
+    industry_selected                 = 'none'
+
+    tickers_db = screener.objects.all().values()
+    sector_options = list(set([x['sector'] for x in tickers_db if x['options'] == True]))
+    sector_options.remove('')
+    industry_options = list(set([x['industry'] for x in tickers_db if x['options'] == True]))
+    industry_options.remove('')
+    sector_options.sort()
+    industry_options.sort()
 
     if request.method == 'POST':
-        max_days_to_exp                = int(request.POST.get('max_days_to_exp'))
-        max_otm_percent                = float(request.POST.get('max_otm_percent'))
-        max_itm_percent                = float(request.POST.get('max_itm_percent'))
-        tickers_str                    = request.POST.get('tickers')
-        tickers                        = re.split(',| ', tickers_str)
+        sell_puts          = bool(request.POST.get('sell_puts'))
+        sell_calls         = bool(request.POST.get('sell_calls'))
+        min_price          = float(request.POST.get('min_price'))
+        max_price          = float(request.POST.get('max_price'))
+        min_strike_pc      = float(request.POST.get('min_strike_pc'))
+        max_strike_pc      = float(request.POST.get('max_strike_pc'))
+        min_profit_pc      = float(request.POST.get('min_profit_pc'))
+        max_days_to_exp    = int(request.POST.get('max_days_to_exp'))
+        sector_selected    = request.POST.get('sector')
+        industry_selected  = request.POST.get('industry')
+        tickers_str        = request.POST.get('tickers')
+
+        if sector_selected == 'Select Sector':
+            sector_selected = 'none'
+
+        if industry_selected == 'Select Industry':
+            industry_selected = 'none'
+
+        tickers = re.split(',| ', tickers_str)
         if '' in tickers:
             tickers.remove('')
-        min_premium_to_collatral_ratio = float(request.POST.get('min_premium_to_collatral_ratio'))
-        calculations = StockUtils.CashSecuredPuts(tickers=tickers,
-                                                  max_days_to_exp=max_days_to_exp,
-                                                  max_otm_percent=max_otm_percent,
-                                                  max_itm_percent=max_itm_percent,
-                                                  min_premium_to_collatral_ratio=min_premium_to_collatral_ratio)
-    ctx['tickers']                        = tickers_str
-    ctx['max_days_to_exp']                = max_days_to_exp
-    ctx['max_otm_percent']                = max_otm_percent
-    ctx['max_itm_percent']                = max_itm_percent
-    ctx['min_premium_to_collatral_ratio'] = min_premium_to_collatral_ratio
-    ctx['iv']                             = [ entry['iv']                         for entry in calculations ]
-    ctx['dte']                            = [ entry['dte']                        for entry in calculations ]
-    ctx['delta']                          = [ entry['delta']                      for entry in calculations ]
-    ctx['theta']                          = [ entry['theta']                      for entry in calculations ]
-    ctx['symbol']                         = [ entry['symbol']                     for entry in calculations ]
-    ctx['strike']                         = [ entry['strike']                     for entry in calculations ]
-    ctx['premium']                        = [ entry['premium']                    for entry in calculations ]
-    ctx['exp_date']                       = [ entry['exp_date']                   for entry in calculations ]
-    ctx['curr_price']                     = [ entry['curr_price']                 for entry in calculations ]
-    ctx['otm_percent']                    = [ entry['otm_percent']                for entry in calculations ]
-    ctx['annual_return']                  = [ entry['annual_return']              for entry in calculations ]
-    ctx['ownership_cost']                 = [ entry['ownership_cost']             for entry in calculations ]
-    ctx['drop_to_loss_percent']           = [ entry['drop_to_loss_percent']       for entry in calculations ]
-    ctx['premium_to_collatral_ratio']     = [ entry['premium_to_collatral_ratio'] for entry in calculations ]
 
-    return render(request, 'cash_secured_puts.html', ctx)
+        if min_price or max_price or industry_selected != 'none' or sector_selected != 'none':
+            if len(tickers_db) and min_price:
+                tickers_db = [x for x in tickers_db if x['price'] >= min_price]
+            
+            if len(tickers_db) and max_price:
+                tickers_db = [x for x in tickers_db if x['price'] <= max_price]
+
+            if len(tickers_db) and industry_selected != 'none':
+                tickers_db = [x for x in tickers_db if x['industry'] == industry_selected]
+
+            if len(tickers_db) and sector_selected != 'none':
+                tickers_db = [x for x in tickers_db if x['sector'] == sector_selected]
+
+            tickers = [x['symbol'] for x in tickers_db]
+
+        ctx['tickers']                  = tickers_str
+        ctx['sell_calls']               = sell_calls
+        ctx['sell_puts']                = sell_puts
+        ctx['min_price']                = min_price
+        ctx['max_price']                = max_price
+        ctx['min_strike_pc']            = min_strike_pc
+        ctx['max_strike_pc']            = max_strike_pc
+        ctx['min_profit_pc']            = min_profit_pc
+        ctx['max_days_to_exp']          = max_days_to_exp
+        ctx['sector_options']           = sector_options
+        ctx['industry_options']         = industry_options
+        ctx['sector_selected']          = sector_selected
+        ctx['industry_selected']        = industry_selected
+        task = asyn_sell_options.delay(tickers=tickers,
+                                       sell_calls=sell_calls,
+                                       sell_puts=sell_puts,
+                                       max_days_to_exp=max_days_to_exp,
+                                       min_strike_pc=min_strike_pc,
+                                       max_strike_pc=max_strike_pc,
+                                       min_profit_pc=min_profit_pc,
+                                       ctx=ctx)
+        return render(request, 'sell_options_progress.html', { 'task_id' : task.task_id })
+    else:
+        ctx['tickers']                  = tickers_str
+        ctx['sell_calls']               = sell_calls
+        ctx['sell_puts']                = sell_puts
+        ctx['min_price']                = min_price
+        ctx['max_price']                = max_price
+        ctx['min_strike_pc']            = min_strike_pc
+        ctx['max_strike_pc']            = max_strike_pc
+        ctx['min_profit_pc']            = min_profit_pc
+        ctx['max_days_to_exp']          = max_days_to_exp
+        ctx['sector_options']           = sector_options
+        ctx['industry_options']         = industry_options
+        ctx['sector_selected']          = sector_selected
+        ctx['industry_selected']        = industry_selected
+        ctx['iv']                       = []
+        ctx['dte']                      = []
+        ctx['type']                     = []
+        ctx['delta']                    = []
+        ctx['theta']                    = []
+        ctx['symbol']                   = []
+        ctx['strike']                   = []
+        ctx['premium']                  = []
+        ctx['exp_date']                 = []
+        ctx['profit_pc']                = []
+        ctx['curr_price']               = []
+        ctx['itm_percent']              = []
+        ctx['max_profit_pc']            = []
+        ctx['annual_return']            = []
+        ctx['ownership_cost']           = []
+        ctx['annual_max_return']        = []
+        ctx['percent_drop_before_loss'] = []
+        return render(request, 'sell_options_chart.html', ctx)
