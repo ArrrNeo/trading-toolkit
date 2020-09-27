@@ -10,20 +10,15 @@
 {% block content %}
 
 <form action="/sell_options_chart/" method="POST">
-  <h4 class="card-title">filters</h4>
   <table class="table table-bordered">
     <colgroup>
       <col class="one-five" />
       <col class="one-three" />
-      <col class="one-nine" />
-      <col class="five" />
-      <col class="five" />
-      <col class="five" />
+      <col class="two-zero" />
       <col class="six" />
       <col class="six" />
       <col class="six" />
-      <col class="four" />
-      <col class="four" />
+      <col class="six" />
       <col class="six" />
     </colgroup>
     <tbody>
@@ -34,11 +29,8 @@
         <th style="text-align:center"> MinPrice </th>
         <th style="text-align:center"> MaxPrice </th>
         <th style="text-align:center"> MaxDTE </th>
-        <th style="text-align:center"> MinStrike % </th>
-        <th style="text-align:center"> MaxStrike % </th>
         <th style="text-align:center"> MinProfit % </th>
-        <th style="text-align:center"> Calls </th>
-        <th style="text-align:center"> Puts </th>
+        <th style="text-align:center"> Screener </th>
       </tr>
       <tr>
         <td style="text-align:center"> <input id="tickers"                  type="text"     name="tickers"                  value="{{ tickers }}"> </td>
@@ -47,12 +39,53 @@
         <td style="text-align:center"> <input id="min_price"                type="text"     name="min_price"                value="{{ min_price }}"> </td>
         <td style="text-align:center"> <input id="max_price"                type="text"     name="max_price"                value="{{ max_price }}"> </td>
         <td style="text-align:center"> <input id="max_days_to_exp"          type="text"     name="max_days_to_exp"          value="{{ max_days_to_exp }}"> </td>
-        <td style="text-align:center"> <input id="min_strike_pc"            type="text"     name="min_strike_pc"            value="{{ min_strike_pc }}"> </td>
-        <td style="text-align:center"> <input id="max_strike_pc"            type="text"     name="max_strike_pc"            value="{{ max_strike_pc }}"> </td>
         <td style="text-align:center"> <input id="min_profit_pc"            type="text"     name="min_profit_pc"            value="{{ min_profit_pc }}"> </td>
-        <td style="text-align:center"> <input id="sell_calls"               type="checkbox" name="sell_calls"               {% if sell_calls %} checked{% endif %}> </td>
-        <td style="text-align:center"> <input id="sell_puts"                type="checkbox" name="sell_puts"                {% if sell_puts  %} checked{% endif %}> </td>
         <th style="text-align:center"> <input type="submit" value="submit" name='submit'> </th>
+      </tr>
+    </tbody>
+  </table>
+  <table class="table table-bordered">
+    <colgroup>
+      <col class="eight" />
+      <col class="eight" />
+      <col class="eight" />
+      <col class="eight" />
+      <col class="four" />
+      <col class="eight" />
+      <col class="eight" />
+      <col class="eight" />
+      <col class="eight" />
+      <col class="four" />
+      <col class="five" />
+    </colgroup>
+    <tbody>
+      <tr>
+        <th style="text-align:center"> MinStrike(Call/ITM) % </th>
+        <th style="text-align:center"> MaxStrike(Call/OTM) % </th>
+        <th style="text-align:center"> MinDelta(Call) </th>
+        <th style="text-align:center"> MaxDelta(Call) </th>
+        <th style="text-align:center"> Calls </th>
+        <th style="text-align:center"> MinStrike(Put/OTM) % </th>
+        <th style="text-align:center"> MaxStrike(Put/ITM) % </th>
+        <th style="text-align:center"> MinDelta(Put) </th>
+        <th style="text-align:center"> MaxDelta(Put) </th>
+        <th style="text-align:center"> Puts </th>
+        <th style="text-align:center"> Chart </th>
+      </tr>
+      <tr>
+        <td style="text-align:center"> <input id="min_strike_pc_call" type="text"     name="min_strike_pc_call" value="{{ min_strike_pc_call }}"> </td>
+        <td style="text-align:center"> <input id="max_strike_pc_call" type="text"     name="max_strike_pc_call" value="{{ max_strike_pc_call }}"> </td>
+        <td style="text-align:center"> <input id="min_delta_call"     type="text"     name="min_delta_call"     value="{{ min_delta_call }}"> </td>
+        <td style="text-align:center"> <input id="max_delta_call"     type="text"     name="max_delta_call"     value="{{ max_delta_call }}"> </td>
+        <td style="text-align:center"> <input id="sell_calls"         type="checkbox" name="sell_calls"         {% if sell_calls %} checked{% endif %}> </td>
+        
+        <td style="text-align:center"> <input id="min_strike_pc_put"  type="text"     name="min_strike_pc_put"  value="{{ min_strike_pc_put }}"> </td>
+        <td style="text-align:center"> <input id="max_strike_pc_put"  type="text"     name="max_strike_pc_put"  value="{{ max_strike_pc_put }}"> </td>
+        <td style="text-align:center"> <input id="min_delta_put"      type="text"     name="min_delta_put"      value="{{ min_delta_put }}"> </td>
+        <td style="text-align:center"> <input id="max_delta_put"      type="text"     name="max_delta_put"      value="{{ max_delta_put }}"> </td>
+        <td style="text-align:center"> <input id="sell_puts"          type="checkbox" name="sell_puts"          {% if sell_puts %} checked{% endif %}> </td>
+
+        <th style="text-align:center"> <input type="button" value="refresh" name='refresh' onclick="myFunction()"> </th>
       </tr>
     </tbody>
   </table>
@@ -92,6 +125,121 @@
     '#ffffff',
   ];
 
+  var min_p_delta = 0;
+  var max_p_delta = -1;
+  var min_c_delta = 1;
+  var max_c_delta = 0;
+  /* filter related parameter */
+  var sell_calls                 = "{{ sell_calls }}";
+  var sell_puts                  = "{{ sell_puts }}";
+  var sector_selected            = "{{ sector_selected }}";
+  var industry_selected          = "{{ industry_selected }}";
+  var min_delta_put              = {{ min_delta_put              | safe }};
+  var max_delta_put              = {{ max_delta_put              | safe }};
+  var min_delta_call             = {{ min_delta_call             | safe }};
+  var max_delta_call             = {{ max_delta_call             | safe }};
+  var min_strike_pc_put          = {{ min_strike_pc_put          | safe }};
+  var max_strike_pc_put          = {{ max_strike_pc_put          | safe }};
+  var min_strike_pc_call         = {{ min_strike_pc_call         | safe }};
+  var max_strike_pc_call         = {{ max_strike_pc_call         | safe }};
+  var sector_options             = {{ sector_options             | safe }};
+  var industry_options           = {{ industry_options           | safe }};
+  /* data related parameter */
+  var iv                         = {{ iv                         | safe }};
+  var dte                        = {{ dte                        | safe }};
+  var type                       = {{ type                       | safe }};
+  var delta                      = {{ delta                      | safe }};
+  var theta                      = {{ theta                      | safe }};
+  var symbol                     = {{ symbol                     | safe }};
+  var strike                     = {{ strike                     | safe }};
+  var premium                    = {{ premium                    | safe }};
+  var exp_date                   = {{ exp_date                   | safe }};
+  var profit_pc                  = {{ profit_pc                  | safe }};
+  var curr_price                 = {{ curr_price                 | safe }};
+  var itm_percent                = {{ itm_percent                | safe }};
+  var max_profit_pc              = {{ max_profit_pc              | safe }};
+  var annual_return              = {{ annual_return              | safe }};
+  var ownership_cost             = {{ ownership_cost             | safe }};
+  var annual_max_return          = {{ annual_max_return          | safe }};
+  var percent_drop_before_loss   = {{ percent_drop_before_loss   | safe }};
+  var scatter_data = [{
+    type            : "scatter",
+    toolTipContent  : "sell {symbol} {strike}{type} {exp_date} at {premium}\
+                      <br/>profit_to_collatral (annual) %: {y} ({annual_return})\
+                      <br/>curr_price: {curr_price}\
+                      <br/>ownership_cost: {ownership_cost}\
+                      <br/>otm %: {itm_percent}\
+                      <br/>drop_before_loss %: {percent_drop_before_loss}\
+                      <br/>iv: {iv}%\
+                      <br/>delta: {delta}\
+                      <br/>theta: {theta}\
+                      <br/>days to expiry: {dte}",
+    dataPoints      : []
+  }];
+  var chart = new CanvasJS.Chart("chartContainer", {
+    backgroundColor : "transparent",
+    title           : {
+                        fontColor : 'white',
+                        fontSize: 25,
+                        text: "profit_pc vs coverd call"
+                      },
+    axisX           : {
+                        titleFontColor : 'white',
+                        titleFontSize: 25,
+                        labelFontColor: 'white',
+                        labelFontSize: 18,
+                        title:"days to expiry"
+                      },
+    axisY           : {
+                        titleFontColor : 'white',
+                        titleFontSize: 25,
+                        labelFontColor: 'white',
+                        labelFontSize: 18,
+                        logarithmic: false,
+                        title: "profit_pc"
+                      },
+    data            : scatter_data,
+  });
+
+  function myFunction() {
+    var idx = 0;
+    min_p_delta = 0;
+    max_p_delta = -1;
+    min_c_delta = 1;
+    max_c_delta = 0;
+    sell_calls         = document.getElementById('sell_calls').checked;
+    sell_puts          = document.getElementById('sell_puts').checked;
+    min_delta_put      = document.getElementById('min_delta_put').value;
+    max_delta_put      = document.getElementById('max_delta_put').value;
+    min_delta_call     = document.getElementById('min_delta_call').value;
+    max_delta_call     = document.getElementById('max_delta_call').value;
+    min_strike_pc_put  = document.getElementById('min_strike_pc_put').value;
+    max_strike_pc_put  = document.getElementById('max_strike_pc_put').value;
+    min_strike_pc_call = document.getElementById('min_strike_pc_call').value;
+    max_strike_pc_call = document.getElementById('max_strike_pc_call').value;
+    console.log('sell_calls:         ' + sell_calls);
+    console.log('sell_puts:          ' + sell_puts);
+    console.log('min_delta_put:      ' + min_delta_put);
+    console.log('max_delta_put:      ' + max_delta_put);
+    console.log('min_delta_call:     ' + min_delta_call);
+    console.log('max_delta_call:     ' + max_delta_call);
+    console.log('min_strike_pc_put:  ' + min_strike_pc_put);
+    console.log('max_strike_pc_put:  ' + max_strike_pc_put);
+    console.log('min_strike_pc_call: ' + min_strike_pc_call);
+    console.log('max_strike_pc_call: ' + max_strike_pc_call);
+    console.log('refresh clicked');
+    chart.options.data[0].dataPoints = [];
+    console.log(chart.options.data[0].dataPoints.length);
+    for (idx = 0; idx < symbol.length; ++idx) {
+      add_data_point(idx);
+    }
+    console.log(chart.options.data[0].dataPoints.length);
+    for (idx = 0; idx < chart.options.data[0].dataPoints.length; ++idx) {
+      update_color(idx);
+    }
+    chart.render();
+  }
+
   function delta_color(type, delta, min_p_delta, max_p_delta, min_c_delta, max_c_delta) {
     if (type == 'c') {
       var diff = max_c_delta - min_c_delta;
@@ -114,117 +262,79 @@
     }
   }
 
-  window.onload = function () {
-    var idx                        = 0;
-    var iv                         = {{ iv                         | safe }}
-    var dte                        = {{ dte                        | safe }}
-    var type                       = {{ type                       | safe }}
-    var delta                      = {{ delta                      | safe }}
-    var theta                      = {{ theta                      | safe }}
-    var symbol                     = {{ symbol                     | safe }}
-    var strike                     = {{ strike                     | safe }}
-    var premium                    = {{ premium                    | safe }}
-    var exp_date                   = {{ exp_date                   | safe }}
-    var profit_pc                  = {{ profit_pc                  | safe }}
-    var curr_price                 = {{ curr_price                 | safe }}
-    var itm_percent                = {{ itm_percent                | safe }}
-    var max_profit_pc              = {{ max_profit_pc              | safe }}
-    var annual_return              = {{ annual_return              | safe }}
-    var ownership_cost             = {{ ownership_cost             | safe }}
-    var annual_max_return          = {{ annual_max_return          | safe }}
-    var percent_drop_before_loss   = {{ percent_drop_before_loss   | safe }}
-    var sector_options             = {{ sector_options             | safe }};
-    var industry_options           = {{ industry_options           | safe }};
-    var sector_selected            = "{{ sector_selected           | safe }}";
-    var industry_selected          = "{{ industry_selected         | safe }}";
-
-    var scatter_data = [{
-                          type            : "scatter",
-                          toolTipContent  : "sell {symbol} {strike}{type} {exp_date} at {premium}\
-                                            <br/>profit_to_collatral (annual) %: {y} ({annual_return})\
-                                            <br/>curr_price: {curr_price}\
-                                            <br/>ownership_cost: {ownership_cost}\
-                                            <br/>otm %: {itm_percent}\
-                                            <br/>drop_before_loss %: {percent_drop_before_loss}\
-                                            <br/>iv: {iv}%\
-                                            <br/>delta: {delta}\
-                                            <br/>theta: {theta}\
-                                            <br/>days to expiry: {dte}",
-                          dataPoints      : []
-                        }];
-    var chart = new CanvasJS.Chart("chartContainer",
-                                   {
-                                     backgroundColor : "transparent",
-                                     title           : {
-                                                          fontColor : 'white',
-                                                          fontSize: 25,
-                                                          text: "profit_pc vs coverd call"
-                                                       },
-                                     axisX           : {
-                                                          titleFontColor : 'white',
-                                                          titleFontSize: 25,
-                                                          labelFontColor: 'white',
-                                                          labelFontSize: 18,
-                                                          title:"days to expiry"
-                                                       },
-                                     axisY           : {
-                                                          titleFontColor : 'white',
-                                                          titleFontSize: 25,
-                                                          labelFontColor: 'white',
-                                                          labelFontSize: 18,
-                                                          logarithmic: false,
-                                                          title: "profit_pc"
-                                                       },
-                                     data            : scatter_data,
-                                   }
-                                  );
-    var min_p_delta = 0;
-    var max_p_delta = -1;
-    var min_c_delta = 1;
-    var max_c_delta = 0;
-    for (idx = 1; idx < delta.length; ++idx) {
-      if (type[idx] == 'p') {
-        if (delta[idx] < min_p_delta) {
-          min_p_delta = delta[idx];
-        }
-        if (delta[idx] > max_p_delta) {
-          max_p_delta = delta[idx];
-        }
-      } else {
-        if (delta[idx] < min_c_delta) {
-          min_c_delta = delta[idx];
-        }
-        if (delta[idx] > max_c_delta) {
-          max_c_delta = delta[idx];
-        }
+  function add_data_point(idx) {
+    var x_tick = dte[idx];
+    if (type[idx] == 'c') {
+      if (sell_calls != 'True' && sell_calls != true) {
+        return;
+      }
+      /* shift calls by 0.5 for easy display */
+      x_tick = x_tick + 0.5;
+      if (delta[idx] < min_c_delta) {
+        min_c_delta = delta[idx];
+      }
+      if (delta[idx] > max_c_delta) {
+        max_c_delta = delta[idx];
+      }
+      var min_strike = (curr_price[idx] * (100 - min_strike_pc_call) / 100);
+      var max_strike = (curr_price[idx] * (100 + max_strike_pc_call) / 100);
+      console.log('min_strike_call: ' + min_strike);
+      console.log('max_strike_call: ' + max_strike);
+      if (!(strike[idx] >= min_strike && strike[idx] <= max_strike && delta[idx] >= min_delta_call && delta[idx] <= max_delta_call)) {
+        return;
+      }
+    } else {
+      if (sell_puts != 'True' && sell_puts != true) {
+        return;
+      }
+      if (delta[idx] < min_p_delta) {
+        min_p_delta = delta[idx];
+      }
+      if (delta[idx] > max_p_delta) {
+        max_p_delta = delta[idx];
+      }
+      var min_strike = (curr_price[idx] * (100 - min_strike_pc_put) / 100);
+      var max_strike = (curr_price[idx] * (100 + max_strike_pc_put) / 100);
+      console.log('min_strike_put: ' + min_strike);
+      console.log('max_strike_put: ' + max_strike);
+      if (!(strike[idx] >= min_strike && strike[idx] <= max_strike && delta[idx] >= min_delta_put && delta[idx] <= max_delta_put)) {
+        return;
       }
     }
+    chart.options.data[0].dataPoints.push({
+      x                        : x_tick,
+      y                        : profit_pc[idx],
+      iv                       : iv[idx],
+      dte                      : dte[idx],
+      type                     : type[idx],
+      delta                    : delta[idx],
+      theta                    : theta[idx],
+      symbol                   : symbol[idx],
+      strike                   : strike[idx],
+      premium                  : premium[idx],
+      exp_date                 : exp_date[idx],
+      curr_price               : curr_price[idx],
+      itm_percent              : itm_percent[idx],
+      annual_return            : annual_return[idx],
+      ownership_cost           : ownership_cost[idx],
+      percent_drop_before_loss : percent_drop_before_loss[idx],
+      markerSize               : 4,
+      color                    : '#ffffff'
+    });
+  }
+  function update_color(idx) {
+    chart.options.data[0].dataPoints[idx].color = delta_color(chart.options.data[0].dataPoints[idx].type,
+                                                              chart.options.data[0].dataPoints[idx].delta,
+                                                              min_p_delta, max_p_delta, min_c_delta, max_c_delta);
+  }
+
+  window.onload = function () {
+    var idx = 0;
     for (idx = 0; idx < symbol.length; ++idx) {
-      var x_tick = dte[idx];
-      if (type[idx] == 'c') {
-        // shift calls by 0.5 for easy display
-        x_tick = x_tick + 0.5;
-      }
-      chart.options.data[0].dataPoints.push({
-                                              x                        : x_tick,
-                                              y                        : profit_pc[idx],
-                                              iv                       : iv[idx],
-                                              dte                      : dte[idx],
-                                              type                     : type[idx],
-                                              delta                    : delta[idx],
-                                              theta                    : theta[idx],
-                                              symbol                   : symbol[idx],
-                                              strike                   : strike[idx],
-                                              premium                  : premium[idx],
-                                              exp_date                 : exp_date[idx],
-                                              curr_price               : curr_price[idx],
-                                              itm_percent              : itm_percent[idx],
-                                              annual_return            : annual_return[idx],
-                                              ownership_cost           : ownership_cost[idx],
-                                              percent_drop_before_loss : percent_drop_before_loss[idx],
-                                              markerSize               : 4,
-                                              color                    : delta_color(type[idx], delta[idx], min_p_delta, max_p_delta, min_c_delta, max_c_delta)
-                                            });
+      add_data_point(idx);
+    }
+    for (idx = 0; idx < chart.options.data[0].dataPoints.length; ++idx) {
+      update_color(idx);
     }
     chart.render();
 
@@ -247,7 +357,6 @@
       }
       document.getElementById("industry").appendChild(el);
     });
-
   }
 </script>
 {% endblock javascripts %}

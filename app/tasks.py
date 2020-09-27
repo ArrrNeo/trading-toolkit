@@ -25,20 +25,12 @@ def update_screener(self, duration):
 @shared_task(bind=True)
 def asyn_sell_options(self,
                       tickers,
-                      sell_calls,
-                      sell_puts,
                       max_days_to_exp,
-                      min_strike_pc,
-                      max_strike_pc,
                       min_profit_pc,
                       ctx): # this is used for populating html
     progress_recorder = ProgressRecorder(self)
     calculations = StockUtils.SellOptions(tickers=tickers,
-                                          sell_calls=sell_calls,
-                                          sell_puts=sell_puts,
                                           max_days_to_exp=max_days_to_exp,
-                                          min_strike_pc=min_strike_pc,
-                                          max_strike_pc=max_strike_pc,
                                           min_profit_pc=min_profit_pc,
                                           progress_recorder=progress_recorder)
     ctx['iv']                       = [ entry['iv']                       for entry in calculations ]

@@ -212,23 +212,19 @@ class StockUtils():
     @staticmethod
     # get info for covered call chart
     def SellOptions(tickers,
-                    sell_calls,       # filter: should calls be considered
-                    sell_puts,        # filter: should puts be considered
                     max_days_to_exp,  # filter: number of days to exp
-                    min_strike_pc,    # filter: percentage min strike is away from current price
-                    max_strike_pc,    # filter: percentage max strike is away from current price
                     min_profit_pc,    # filter: profit to collatral percentage
                     progress_recorder=None):
+        print (tickers)
+        print (max_days_to_exp)
+        print (min_profit_pc)
+        print (progress_recorder)
         calculations = []
         num_sym = len(tickers)
         ctr = 0
         for symbol in tickers:
             StockUtils.SellOptions_helper_func_1(symbol,
-                                                 sell_calls,
-                                                 sell_puts,
                                                  max_days_to_exp,
-                                                 min_strike_pc,
-                                                 max_strike_pc,
                                                  min_profit_pc,
                                                  calculations)
             if progress_recorder:
@@ -238,19 +234,12 @@ class StockUtils():
 
     @staticmethod
     def SellOptions_helper_func_1(symbol,
-                                  sell_calls,       # filter: should calls be considered
-                                  sell_puts,        # filter: should puts be considered
                                   max_days_to_exp,  # filter: number of days to exp
-                                  min_strike_pc,    # filter: percentage min strike is away from current price
-                                  max_strike_pc,    # filter: percentage max strike is away from current price
                                   min_profit_pc,    # filter: profit to collatral percentage
                                   calculations):
         curr_price = StockUtils.getCurrentPrice(symbol)
         if curr_price == 0:
             return
-
-        min_strike = (curr_price * (100 - min_strike_pc) / 100)
-        max_strike = (curr_price * (100 + max_strike_pc) / 100)
 
         currentDate  = datetime.date.today()
         max_exp_date = currentDate + dateutil.relativedelta.relativedelta(days=max_days_to_exp)
@@ -265,7 +254,7 @@ class StockUtils():
             # get all options
             option_chains = StockUtils.getOptions(symbol, exp_date)
             # filter by min/max strike price, invalid option stikes (tradier api is reporting incorrect strikes for some)
-            option_chains = [x for x in option_chains if x['strike'] % 0.25 == 0 and x['strike'] >= min_strike and x['strike'] <= max_strike ]
+            option_chains = [x for x in option_chains if x['strike'] % 0.25 == 0]
             for row in option_chains:
                 entry = {}
                 if row['bid'] == 0:
@@ -275,9 +264,9 @@ class StockUtils():
                 if not premium:
                     continue
                 strike = row['strike']
-                if sell_calls and row['option_type'] == 'call':
+                if row['option_type'] == 'call':
                     entry = StockUtils.ProcessSellCall(strike, curr_price, premium, min_profit_pc, dte)
-                elif sell_puts and row['option_type'] == 'put':
+                elif row['option_type'] == 'put':
                     entry = StockUtils.ProcessSellPut(strike, curr_price, premium, min_profit_pc, dte)
                 if not entry:
                     continue
