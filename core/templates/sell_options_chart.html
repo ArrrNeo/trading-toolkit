@@ -33,7 +33,7 @@
         <th style="text-align:center"> Screener </th>
       </tr>
       <tr>
-        <td style="text-align:center"> <input id="tickers"                  type="text"     name="tickers"                  value="{{ tickers }}"> </td>
+        <td style="text-align:center"> <input id="tickers"                  type="text"     name="tickers"                  value="{{ tickers_str }}"> </td>
         <td style="text-align:center"> <select id="sector"                  name="sector">   <option>Select Sector  </option> </select> </td>
         <td style="text-align:center"> <select id="industry"                name="industry"> <option>Select Industry</option> </select> </td>
         <td style="text-align:center"> <input id="min_price"                type="text"     name="min_price"                value="{{ min_price }}"> </td>
@@ -44,6 +44,8 @@
       </tr>
     </tbody>
   </table>
+  {% csrf_token %}
+  <div id="chartContainer" style="height: 700px; width: 100%;"></div>
   <table class="table table-bordered">
     <colgroup>
       <col class="eight" />
@@ -77,20 +79,22 @@
         <td style="text-align:center"> <input id="max_strike_pc_call" type="text"     name="max_strike_pc_call" value="{{ max_strike_pc_call }}"> </td>
         <td style="text-align:center"> <input id="min_delta_call"     type="text"     name="min_delta_call"     value="{{ min_delta_call }}"> </td>
         <td style="text-align:center"> <input id="max_delta_call"     type="text"     name="max_delta_call"     value="{{ max_delta_call }}"> </td>
-        <td style="text-align:center"> <input id="sell_calls"         type="checkbox" name="sell_calls"         {% if sell_calls %} checked{% endif %}> </td>
+        <td style="text-align:center"> <input id="sell_calls"         type="checkbox" name="sell_calls"         onchange="myFunction()" {% if sell_calls %} checked {% endif %}> </td>
         
         <td style="text-align:center"> <input id="min_strike_pc_put"  type="text"     name="min_strike_pc_put"  value="{{ min_strike_pc_put }}"> </td>
         <td style="text-align:center"> <input id="max_strike_pc_put"  type="text"     name="max_strike_pc_put"  value="{{ max_strike_pc_put }}"> </td>
         <td style="text-align:center"> <input id="min_delta_put"      type="text"     name="min_delta_put"      value="{{ min_delta_put }}"> </td>
         <td style="text-align:center"> <input id="max_delta_put"      type="text"     name="max_delta_put"      value="{{ max_delta_put }}"> </td>
-        <td style="text-align:center"> <input id="sell_puts"          type="checkbox" name="sell_puts"          {% if sell_puts %} checked{% endif %}> </td>
+        <td style="text-align:center"> <input id="sell_puts"          type="checkbox" name="sell_puts"          onchange="myFunction()" {% if sell_puts %} checked {% endif %}> </td>
 
         <th style="text-align:center"> <input type="button" value="refresh" name='refresh' onclick="myFunction()"> </th>
       </tr>
     </tbody>
   </table>
-  {% csrf_token %}
-  <div id="chartContainer" style="height: 700px; width: 100%;"></div>
+  <div>
+    <table class="table table-bordered" id="show_tickers_table">
+    </table>
+  </div>
 </form>
 
 {% endblock content %}
@@ -134,6 +138,7 @@
   var sell_puts                  = "{{ sell_puts }}";
   var sector_selected            = "{{ sector_selected }}";
   var industry_selected          = "{{ industry_selected }}";
+  var tickers                    = {{ tickers                    | safe }};
   var min_delta_put              = {{ min_delta_put              | safe }};
   var max_delta_put              = {{ max_delta_put              | safe }};
   var min_delta_call             = {{ min_delta_call             | safe }};
@@ -217,23 +222,26 @@
     max_strike_pc_put  = document.getElementById('max_strike_pc_put').value;
     min_strike_pc_call = document.getElementById('min_strike_pc_call').value;
     max_strike_pc_call = document.getElementById('max_strike_pc_call').value;
-    console.log('sell_calls:         ' + sell_calls);
-    console.log('sell_puts:          ' + sell_puts);
-    console.log('min_delta_put:      ' + min_delta_put);
-    console.log('max_delta_put:      ' + max_delta_put);
-    console.log('min_delta_call:     ' + min_delta_call);
-    console.log('max_delta_call:     ' + max_delta_call);
-    console.log('min_strike_pc_put:  ' + min_strike_pc_put);
-    console.log('max_strike_pc_put:  ' + max_strike_pc_put);
-    console.log('min_strike_pc_call: ' + min_strike_pc_call);
-    console.log('max_strike_pc_call: ' + max_strike_pc_call);
-    console.log('refresh clicked');
+    // console.log('sell_calls:         ' + sell_calls);
+    // console.log('sell_puts:          ' + sell_puts);
+    // console.log('min_delta_put:      ' + min_delta_put);
+    // console.log('max_delta_put:      ' + max_delta_put);
+    // console.log('min_delta_call:     ' + min_delta_call);
+    // console.log('max_delta_call:     ' + max_delta_call);
+    // console.log('min_strike_pc_put:  ' + min_strike_pc_put);
+    // console.log('max_strike_pc_put:  ' + max_strike_pc_put);
+    // console.log('min_strike_pc_call: ' + min_strike_pc_call);
+    // console.log('max_strike_pc_call: ' + max_strike_pc_call);
+    // for (idx = 0; idx < tickers.length; ++idx) {
+    //   console.log(tickers[idx] + ' : ' + document.getElementById(tickers[idx]).checked);
+    // }
+    // console.log('refresh clicked');
     chart.options.data[0].dataPoints = [];
-    console.log(chart.options.data[0].dataPoints.length);
+    // console.log(chart.options.data[0].dataPoints.length);
     for (idx = 0; idx < symbol.length; ++idx) {
       add_data_point(idx);
     }
-    console.log(chart.options.data[0].dataPoints.length);
+    // console.log(chart.options.data[0].dataPoints.length);
     for (idx = 0; idx < chart.options.data[0].dataPoints.length; ++idx) {
       update_color(idx);
     }
@@ -264,6 +272,11 @@
 
   function add_data_point(idx) {
     var x_tick = dte[idx];
+
+    if (document.getElementById(symbol[idx]).checked == false) {
+      return;
+    }
+
     if (type[idx] == 'c') {
       if (sell_calls != 'True' && sell_calls != true) {
         return;
@@ -278,8 +291,8 @@
       }
       var min_strike = (curr_price[idx] * (100 - min_strike_pc_call) / 100);
       var max_strike = (curr_price[idx] * (100 + max_strike_pc_call) / 100);
-      console.log('min_strike_call: ' + min_strike);
-      console.log('max_strike_call: ' + max_strike);
+      // console.log('min_strike_call: ' + min_strike);
+      // console.log('max_strike_call: ' + max_strike);
       if (!(strike[idx] >= min_strike && strike[idx] <= max_strike && delta[idx] >= min_delta_call && delta[idx] <= max_delta_call)) {
         return;
       }
@@ -295,8 +308,8 @@
       }
       var min_strike = (curr_price[idx] * (100 - min_strike_pc_put) / 100);
       var max_strike = (curr_price[idx] * (100 + max_strike_pc_put) / 100);
-      console.log('min_strike_put: ' + min_strike);
-      console.log('max_strike_put: ' + max_strike);
+      // console.log('min_strike_put: ' + min_strike);
+      // console.log('max_strike_put: ' + max_strike);
       if (!(strike[idx] >= min_strike && strike[idx] <= max_strike && delta[idx] >= min_delta_put && delta[idx] <= max_delta_put)) {
         return;
       }
@@ -322,14 +335,52 @@
       color                    : '#ffffff'
     });
   }
+
   function update_color(idx) {
     chart.options.data[0].dataPoints[idx].color = delta_color(chart.options.data[0].dataPoints[idx].type,
                                                               chart.options.data[0].dataPoints[idx].delta,
                                                               min_p_delta, max_p_delta, min_c_delta, max_c_delta);
   }
 
+  function change_enter_action(input_field) {
+    document.getElementById(input_field).onkeypress = function(e) {
+     var key = e.charCode || e.keyCode || 0;     
+     if (key == 13) {
+        myFunction();
+        return false;
+     }
+    }
+  }
+
   window.onload = function () {
     var idx = 0;
+
+    var table = document.getElementById("show_tickers_table");
+    var row   = table.insertRow(0);
+    for (idx = 0; idx < tickers.length; ++idx) {
+      var checkbox = document.createElement('input');
+      checkbox.type = "checkbox";
+      checkbox.name = tickers[idx];
+      checkbox.id = tickers[idx];
+      checkbox.checked = true;
+      checkbox.onchange = myFunction;
+      var label = document.createElement('label')
+      label.htmlFor = tickers[idx];
+      label.appendChild(document.createTextNode(tickers[idx]));
+      var cell = row.insertCell(-1);
+      cell.appendChild(checkbox);
+      cell.appendChild(label);
+    }
+
+    change_enter_action("min_strike_pc_call");
+    change_enter_action("max_strike_pc_call");
+    change_enter_action("min_delta_call");
+    change_enter_action("max_delta_call");
+    change_enter_action("min_strike_pc_put");
+    change_enter_action("max_strike_pc_put");
+    change_enter_action("min_delta_put");
+    change_enter_action("max_delta_put");
+
     for (idx = 0; idx < symbol.length; ++idx) {
       add_data_point(idx);
     }

@@ -68,6 +68,7 @@ def db(request):
 
 def sell_options_chart(request):
     ctx                               = {}
+    tickers                           = ['TSLA']
     tickers_str                       = 'TSLA'
     calculations                      = []
     sell_calls                        = False
@@ -140,7 +141,8 @@ def sell_options_chart(request):
 
             tickers = [x['symbol'] for x in tickers_db]
 
-        ctx['tickers']                  = tickers_str
+        ctx['tickers']                  = tickers
+        ctx['tickers_str']              = tickers_str
         ctx['sell_calls']               = sell_calls
         ctx['sell_puts']                = sell_puts
         ctx['min_price']                = min_price
@@ -165,7 +167,8 @@ def sell_options_chart(request):
                                        ctx=ctx)
         return render(request, 'sell_options_progress.html', { 'task_id' : task.task_id })
     else:
-        ctx['tickers']                  = tickers_str
+        ctx['tickers']                  = tickers
+        ctx['tickers_str']              = tickers_str
         ctx['sell_calls']               = sell_calls
         ctx['sell_puts']                = sell_puts
         ctx['min_price']                = min_price
