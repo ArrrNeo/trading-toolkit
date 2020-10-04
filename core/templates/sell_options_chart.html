@@ -133,6 +133,9 @@
   var max_p_delta = -1;
   var min_c_delta = 1;
   var max_c_delta = 0;
+  var highlight_type = '';
+  var highlight_strike = 0;
+  var highlight_symbol = '';
   /* filter related parameter */
   var sell_calls                 = "{{ sell_calls }}";
   var sell_puts                  = "{{ sell_puts }}";
@@ -270,6 +273,14 @@
     }
   }
 
+  function click_handler(e) {
+    highlight_symbol = e.dataPoint.symbol;
+    highlight_strike = e.dataPoint.strike;
+    highlight_type = e.dataPoint.type;
+    console.log(e.dataPoint.symbol +  ' ' + e.dataPoint.strike + e.dataPoint.type);
+    myFunction();
+  }
+
   function add_data_point(idx) {
     var x_tick = dte[idx];
 
@@ -332,14 +343,22 @@
       ownership_cost           : ownership_cost[idx],
       percent_drop_before_loss : percent_drop_before_loss[idx],
       markerSize               : 4,
+      click                    : click_handler,
       color                    : '#ffffff'
     });
   }
 
   function update_color(idx) {
-    chart.options.data[0].dataPoints[idx].color = delta_color(chart.options.data[0].dataPoints[idx].type,
-                                                              chart.options.data[0].dataPoints[idx].delta,
-                                                              min_p_delta, max_p_delta, min_c_delta, max_c_delta);
+    if (highlight_symbol != '' &&
+        highlight_symbol == chart.options.data[0].dataPoints[idx].symbol &&
+        highlight_strike == chart.options.data[0].dataPoints[idx].strike &&
+        highlight_type   == chart.options.data[0].dataPoints[idx].type) {
+      chart.options.data[0].dataPoints[idx].color = '#ff0000';
+    } else {
+      chart.options.data[0].dataPoints[idx].color = delta_color(chart.options.data[0].dataPoints[idx].type,
+                                                                chart.options.data[0].dataPoints[idx].delta,
+                                                                min_p_delta, max_p_delta, min_c_delta, max_c_delta);
+    }
   }
 
   function change_enter_action(input_field) {
