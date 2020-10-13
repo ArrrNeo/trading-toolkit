@@ -17,5 +17,9 @@ urlpatterns = [
     path('debit_spread_chart/', views.debit_spread_chart, name='debit_spread_chart'),
     path('sell_options_chart/', views.sell_options_chart, name='sell_options_chart'),
     path('sell_options_result/', views.sell_options_result, name='sell_options_result'),
+
+    path('lotto_calls/', views.lotto_calls, name='lotto_calls'),
+    path('lotto_calls_result/', views.lotto_calls_result, name='lotto_calls_result'),
+
     path("db/", views.db, name="db"),
 ]

@@ -17,6 +17,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from celery.result import AsyncResult
 
 from app.tasks import asyn_sell_options
+from app.tasks import asyn_lotto_calls
 from app.stock_utils import StockUtils
 from app.models import screener
 
@@ -91,9 +92,11 @@ def sell_options_chart(request):
 
     tickers_db = screener.objects.all().values()
     sector_options = list(set([x['sector'] for x in tickers_db if x['options'] == True]))
-    sector_options.remove('')
+    if '' in sector_options:
+        sector_options.remove('')
     industry_options = list(set([x['industry'] for x in tickers_db if x['options'] == True]))
-    industry_options.remove('')
+    if '' in industry_options:
+        industry_options.remove('')
     sector_options.sort()
     industry_options.sort()
 
@@ -165,7 +168,7 @@ def sell_options_chart(request):
                                        max_days_to_exp=max_days_to_exp,
                                        min_profit_pc=min_profit_pc,
                                        ctx=ctx)
-        return render(request, 'sell_options_progress.html', { 'task_id' : task.task_id })
+        return render(request, 'progress.html', { 'task_id' : task.task_id, 'url' : 'sell_options_result' })
     else:
         ctx['tickers']                  = tickers
         ctx['tickers_str']              = tickers_str
@@ -205,3 +208,74 @@ def sell_options_chart(request):
         ctx['annual_max_return']        = []
         ctx['percent_drop_before_loss'] = []
         return render(request, 'sell_options_chart.html', ctx)
+
+def lotto_calls_result(request):
+    task_id = request.GET.get('task_id', None)
+    if task_id is not None:
+        task = AsyncResult(task_id)
+        return render(request, 'lotto_calls.html', task.result)
+    else:
+        return HttpResponse('No job id given.')
+
+def lotto_calls(request):
+    ctx                       = {}
+    ctx['min_dte']            = 21
+    ctx['max_dte']            = 45
+    ctx['minMarketCap']       = 8000000
+    ctx['sector_selected']    = 'Technology'
+    ctx['industry_selected']  = 'none'
+    # ctx['pre_er_run_up_flag'] = False
+    # ctx['pre_er_run_up_days'] = 5
+    # ctx['pre_er_run_up_pc']   = 5
+    ctx['post_er_jump_flag']  = True
+    ctx['post_er_jump_pc']    = 5
+    # ctx['delta_flag']         = False
+    # ctx['min_delta']          = 0
+    # ctx['max_delta']          = 1
+    ctx['iv_flag']            = True
+    ctx['min_iv']             = 0.7
+    ctx['max_iv']             = 2.5
+    ctx['max_premium']        = 1
+
+    tickers_db = screener.objects.all().values()
+    sector_options = list(set([x['sector'] for x in tickers_db if x['options'] == True]))
+    industry_options = list(set([x['industry'] for x in tickers_db if x['options'] == True]))
+
+    if '' in sector_options:
+        sector_options.remove('')
+    if '' in industry_options:
+        industry_options.remove('')
+    sector_options.sort()
+    industry_options.sort()
+
+    ctx['sector_options']           = sector_options
+    ctx['industry_options']         = industry_options
+
+    if request.method == 'POST':
+        ctx['min_dte']            = int(request.POST.get('min_dte'))
+        ctx['max_dte']            = int(request.POST.get('max_dte'))
+        ctx['minMarketCap']       = int(request.POST.get('minMarketCap'))
+        # ctx['pre_er_run_up_days'] = int(request.POST.get('pre_er_run_up_days'))
+        ctx['iv_flag']            = bool(request.POST.get('iv_flag'))
+        ctx['sell_puts']          = bool(request.POST.get('sell_puts'))
+        # ctx['delta_flag']         = bool(request.POST.get('delta_flag'))
+        ctx['post_er_jump_flag']  = bool(request.POST.get('post_er_jump_flag'))
+        # ctx['pre_er_run_up_flag'] = bool(request.POST.get('pre_er_run_up_flag'))
+        ctx['min_iv']             = float(request.POST.get('min_iv'))
+        ctx['max_iv']             = float(request.POST.get('max_iv'))
+        # ctx['min_delta']          = float(request.POST.get('min_delta'))
+        # ctx['max_delta']          = float(request.POST.get('max_delta'))
+        # ctx['max_premium']        = float(request.POST.get('max_premium'))
+        ctx['max_premium']        = 1
+        ctx['post_er_jump_pc']    = float(request.POST.get('post_er_jump_pc'))
+        # ctx['pre_er_run_up_pc']   = float(request.POST.get('pre_er_run_up_pc'))
+        ctx['sector_selected']    = request.POST.get('sector')
+        if ctx['sector_selected'] == 'Select Sector':
+            ctx['sector_selected'] = 'none'
+        ctx['industry_selected']  = request.POST.get('industry')
+        if ctx['industry_selected'] == 'Select Industry':
+            ctx['industry_selected'] = 'none'
+        task = asyn_lotto_calls.delay(ctx=ctx)
+        return render(request, 'progress.html', { 'task_id' : task.task_id, 'url' : 'lotto_calls_result' })
+    else:
+        return render(request, 'lotto_calls.html', ctx)

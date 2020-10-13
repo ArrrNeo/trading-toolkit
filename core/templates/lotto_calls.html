@@ -1,0 +1,154 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %} Summary {% endblock %}
+<!-- Specific Plugin CSS goes HERE -->
+{% block plugin_stylesheets %}{% endblock plugin_stylesheets %}
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+<link rel="stylesheet" type="text/css" href="/static/assets/css/app.css">
+{% endblock stylesheets %}
+{% block content %}
+
+<form action="/lotto_calls/" method="POST">
+  <table class="table table-bordered">
+    <colgroup>
+      <col class="one-eight" />
+      <col class="two-zero" />
+      <col class="one-eight" />
+      <!-- <col class="four" />
+      <col class="seven" />
+      <col class="seven" /> -->
+      <col class="five" />
+      <col class="eight" />
+      <col class="five" />
+      <col class="five" />
+      <col class="five" />
+      <col class="five" />
+      <col class="five" />
+      <!-- <col class="five" />
+      <col class="five" />
+      <col class="five" /> -->
+      <col class="six" />
+    </colgroup>
+    <tbody>
+      <tr>
+        <th style="text-align:center"> sector_selected </th>
+        <th style="text-align:center"> industry_selected </th>
+        <th style="text-align:center"> minMarketCap </th>
+
+        <!-- <th style="text-align:center"> pre </th>
+        <th style="text-align:center"> pre_er_days </th>
+        <th style="text-align:center"> pre_er_up </th> -->
+
+        <th style="text-align:center"> post </th>
+        <th style="text-align:center"> post_er_up </th>
+
+        <th style="text-align:center"> min_dte </th>
+        <th style="text-align:center"> max_dte </th>
+
+        <th style="text-align:center"> iv </th>
+        <th style="text-align:center"> min </th>
+        <th style="text-align:center"> max </th>
+
+        <!-- <th style="text-align:center"> delta </th>
+        <th style="text-align:center"> min </th>
+        <th style="text-align:center"> max </th> -->
+      </tr>
+      <tr>
+        <td style="text-align:center"> <select id="sector"   name="sector">   <option>Select Sector  </option> </select> </td>
+        <td style="text-align:center"> <select id="industry" name="industry"> <option>Select Industry</option> </select> </td>
+
+        <td style="text-align:center"> <input id="minMarketCap"       type="text" name="minMarketCap"       value="{{ minMarketCap }}"> </th>
+
+        <!-- <td style="text-align:center"> <input id="pre_er_run_up_flag" type="checkbox" name="pre_er_run_up_flag" onchange="myFunction()" {% if pre_er_run_up_flag %} checked {% endif %}> </td>
+        <td style="text-align:center"> <input id="pre_er_run_up_days" type="text" name="pre_er_run_up_days" value="{{ pre_er_run_up_days }}"> </th>
+        <td style="text-align:center"> <input id="pre_er_run_up_pc"   type="text" name="pre_er_run_up_pc"   value="{{ pre_er_run_up_pc }}"> </th> -->
+
+        <td style="text-align:center"> <input id="post_er_jump_flag" type="checkbox" name="post_er_jump_flag" onchange="myFunction()" {% if post_er_jump_flag %} checked {% endif %}> </td>
+        <td style="text-align:center"> <input id="post_er_jump_pc"    type="text" name="post_er_jump_pc"    value="{{ post_er_jump_pc }}"> </th>
+
+        <td style="text-align:center"> <input id="min_dte"            type="text" name="min_dte"            value="{{ min_dte }}"> </th>
+        <td style="text-align:center"> <input id="max_dte"            type="text" name="max_dte"            value="{{ max_dte }}"> </th>
+
+        <td style="text-align:center"> <input id="iv_flag" type="checkbox" name="iv_flag" onchange="myFunction()" {% if iv_flag %} checked {% endif %}> </td>
+        <td style="text-align:center"> <input id="min_iv"             type="text" name="min_iv"             value="{{ min_iv }}"> </th>
+        <td style="text-align:center"> <input id="max_iv"             type="text" name="max_iv"             value="{{ max_iv }}"> </th>
+
+        <!-- <td style="text-align:center"> <input id="delta_flag" type="checkbox" name="delta_flag" onchange="myFunction()" {% if delta_flag %} checked {% endif %}> </td>
+        <td style="text-align:center"> <input id="min_delta"          type="text" name="min_delta"          value="{{ min_delta }}"> </th>
+        <td style="text-align:center"> <input id="max_delta"          type="text" name="max_delta"          value="{{ max_delta }}"> </th> -->
+
+        <td style="text-align:center"> <input type="submit" value="submit" name='submit'> </th>
+      </tr>
+    </tbody>
+  </table>
+  {% csrf_token %}
+  <div class="content-wrapper">
+    <div class="row">
+      <div class="col-lg-12 grid-margin stretch-card">
+        <div class="card">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th> description </th>
+                    <th> premium </th>
+                    <th> current </th>
+                    <th> delta </th>
+                    <th> iv </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in table %}
+                  <tr>
+                    <td> {{ row.description }} </td>
+                    <td> {{ row.premium | floatformat:2 }} </td>
+                    <td> {{ row.curr_price | floatformat:2 }} </td>
+                    <td> {{ row.delta }} </td>
+                    <td> {{ row.iv }} </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+{% endblock content %}
+{% block plugin_javascripts %}
+<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+{% endblock plugin_javascripts %}
+{% block javascripts %}
+<script>
+  var sector_selected            = "{{ sector_selected }}";
+  var industry_selected          = "{{ industry_selected }}";
+  var sector_options             = {{ sector_options             | safe }};
+  var industry_options           = {{ industry_options           | safe }};
+  window.onload = function () {
+    sector_options.forEach( function(item) {
+      var el = document.createElement("option");
+      el.text = item;
+      el.value = item;
+      if (sector_selected == item) {
+        el.selected = true;
+      }
+      document.getElementById("sector").appendChild(el);
+    });
+
+    industry_options.forEach( function(item) {
+      var el = document.createElement("option");
+      el.text = item;
+      el.value = item;
+      if (industry_selected == item) {
+        el.selected = true;
+      }
+      document.getElementById("industry").appendChild(el);
+    });
+  }
+</script>
+{% endblock javascripts %}

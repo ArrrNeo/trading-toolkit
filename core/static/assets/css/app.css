@@ -32,6 +32,10 @@ input[type=text] {
   display: block;
 }
 
+.two-one {
+  width: 21%;
+}
+
 .two-zero {
   width: 20%;
 }
@@ -44,7 +48,15 @@ input[type=text] {
   width: 18%;
 }
 
-.fifteen {
+.one-seven {
+  width: 17%;
+}
+
+.one-six {
+  width: 16%;
+}
+
+.one-five {
   width: 15%;
 }
 

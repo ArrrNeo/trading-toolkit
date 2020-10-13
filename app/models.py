@@ -8,8 +8,13 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class screener(models.Model):
-    symbol   = models.CharField(max_length=1000, unique=True, primary_key=True)
+    price = models.FloatField(default=0)
+    epsActual = models.FloatField(default=0, null=True)
+    epsEstimate = models.FloatField(default=0, null=True)
+    epsSurprisePC = models.FloatField(default=0, null=True)
+    options = models.BooleanField(default=False)
+    mostRecentER = models.DateTimeField(null=True)
+    sector = models.CharField(max_length=100, default='')
     industry = models.CharField(max_length=100, default='')
-    sector   = models.CharField(max_length=100, default='')
-    options  = models.BooleanField(default=False)
-    price    = models.FloatField()
+    marketCap = models.IntegerField(default=0) # in 1000
+    symbol = models.CharField(max_length=1000, unique=True, primary_key=True)

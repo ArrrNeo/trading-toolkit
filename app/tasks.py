@@ -12,15 +12,16 @@ from datetime import timedelta
 from app.stock_utils import StockUtils
 from app.models import screener
 
-@periodic_task(run_every=timedelta(hours=12), name="periodic_task_populate_screener", ignore_result=True)
-def populate_screener():
-    print ('populate_screener')
-    StockUtils.populateScreener()
+@periodic_task(run_every=timedelta(hours=24), name="populate_screener_daily_task", ignore_result=True)
+def populate_screener_daily_task():
+    print ('populate_screener_daily_task')
+    StockUtils.DailyScreenerUpdate()
 
 @shared_task(bind=True)
-def update_screener(self, duration):
-    print ('update_screener')
-    StockUtils.updateScreener()
+@periodic_task(run_every=timedelta(days=7), name="populate_screener_weekly_task", ignore_result=True)
+def populate_screener_weekly_task():
+    print ('populate_screener_weekly_task')
+    StockUtils.WeeklyScreenerUpdate()
 
 @shared_task(bind=True)
 def asyn_sell_options(self,
@@ -50,4 +51,10 @@ def asyn_sell_options(self,
     ctx['ownership_cost']           = [ entry['ownership_cost']           for entry in calculations ]
     ctx['annual_max_return']        = [ entry['annual_max_return']        for entry in calculations ]
     ctx['percent_drop_before_loss'] = [ entry['percent_drop_before_loss'] for entry in calculations ]
+    return ctx
+
+@shared_task(bind=True)
+def asyn_lotto_calls(self, ctx):
+    progress_recorder = ProgressRecorder(self)
+    ctx['table'] = StockUtils.lotto_calls(ctx=ctx, progress_recorder=progress_recorder)
     return ctx
