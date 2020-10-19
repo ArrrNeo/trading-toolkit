@@ -17,11 +17,16 @@ def populate_screener_daily_task():
     print ('populate_screener_daily_task')
     StockUtils.DailyScreenerUpdate()
 
-@shared_task(bind=True)
 @periodic_task(run_every=timedelta(days=7), name="populate_screener_weekly_task", ignore_result=True)
 def populate_screener_weekly_task():
     print ('populate_screener_weekly_task')
     StockUtils.WeeklyScreenerUpdate()
+
+@shared_task(bind=False)
+def one_time_update():
+    print ('one_time_update')
+    StockUtils.OneTimeUpdate()
+
 
 @shared_task(bind=True)
 def asyn_sell_options(self,

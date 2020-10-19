@@ -233,8 +233,9 @@ def lotto_calls(request):
     # ctx['min_delta']          = 0
     # ctx['max_delta']          = 1
     ctx['iv_flag']            = True
-    ctx['min_iv']             = 0.7
-    ctx['max_iv']             = 2.5
+    ctx['min_iv']             = 70
+    ctx['max_iv']             = 100
+    ctx['max_otm']            = 20
     ctx['max_premium']        = 1
 
     tickers_db = screener.objects.all().values()
@@ -265,8 +266,8 @@ def lotto_calls(request):
         ctx['max_iv']             = float(request.POST.get('max_iv'))
         # ctx['min_delta']          = float(request.POST.get('min_delta'))
         # ctx['max_delta']          = float(request.POST.get('max_delta'))
-        # ctx['max_premium']        = float(request.POST.get('max_premium'))
-        ctx['max_premium']        = 1
+        ctx['max_otm']            = float(request.POST.get('max_otm'))
+        ctx['max_premium']        = float(request.POST.get('max_premium'))
         ctx['post_er_jump_pc']    = float(request.POST.get('post_er_jump_pc'))
         # ctx['pre_er_run_up_pc']   = float(request.POST.get('pre_er_run_up_pc'))
         ctx['sector_selected']    = request.POST.get('sector')

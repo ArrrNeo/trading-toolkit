@@ -3,6 +3,7 @@
 # misc imports
 import os
 import sys
+import time
 import logging
 import datetime
 import requests
@@ -318,6 +319,7 @@ class StockUtils():
         # min_delta          = ctx['min_delta']
         # max_delta          = ctx['max_delta']
         # delta_flag         = ctx['delta_flag']
+        max_otm            = ctx['max_otm']
         max_premium        = ctx['max_premium']
         minMarketCap       = ctx['minMarketCap']
         post_er_jump_pc    = ctx['post_er_jump_pc']
@@ -392,17 +394,23 @@ class StockUtils():
                     try:
                         if item['strike'] < curr_price:
                             continue
+                        if item['strike'] > ((curr_price * (100 + max_otm))/100):
+                            continue
                         if item['strike'] % 0.25 != 0:
                             continue
-                        if iv_flag == True and item['greeks']['mid_iv'] < min_iv:
+                        if iv_flag == True and item['greeks']['mid_iv'] < (min_iv/100) and item['greeks']['mid_iv'] > (max_iv/100):
                             continue
                         premium = (item['bid'] + item['ask'])/2
                         if premium > max_premium:
                             continue
                         item['premium'] = premium
                         item['curr_price'] = curr_price
+                        item['prev_er_surprise'] = stocks['epsSurprisePC']
+                        item['prev_er_jump'] = p_pc_move
                         item['iv'] = item['greeks']['mid_iv']
                         item['delta'] = item['greeks']['delta']
+                        item['mostRecentER'] = stocks['mostRecentER']
+                        item['nextER'] = stocks['nextER']
                         result.append(item)
                     except Exception as e:
                         print ('exception: ' + str(e) + ' for ' + str(item))
@@ -470,6 +478,7 @@ class StockUtils():
     @staticmethod
     # get new tickers data and price update for current
     def DailyScreenerUpdate():
+        print ('DailyScreenerUpdate')
         total_list_of_tickers = NasdaqController(True).getList()
         # identify saved tickers
         saved_stocks = screener.objects.all().values()
@@ -507,7 +516,7 @@ class StockUtils():
     @staticmethod
     # fields that needs weekly update
     def WeeklyScreenerUpdate():
-        print ('updateScreener')
+        print ('WeeklyScreenerUpdate')
         # fetch list of ERs in last 1 week. since this task is run weely
         StockUtils.PopulateEarningDate(7)
 
@@ -528,3 +537,19 @@ class StockUtils():
             except Exception as e:
                 print (e)
             screener.objects.update_or_create(symbol=ticker, defaults={ 'options': options_available, 'marketCap': marketCap })
+
+    @staticmethod
+    # supposed to be called manually
+    def OneTimeUpdate(num_days):
+        count = 1
+        print ('OneTimeUpdate')
+        yec = YahooEarningsCalendar()
+        date_from = datetime.date.today()
+        date_to = date_from + dateutil.relativedelta.relativedelta(days=num_days)
+        ERs = yec.earnings_between(date_from, date_to)
+        ERs = [{k: item[k] for k in ('ticker', 'startdatetime')} for item in ERs]
+        num_itr = len(ERs)
+        for er in ERs:
+            screener.objects.update_or_create(symbol=er['ticker'], defaults={ 'nextER' : er['startdatetime'] })
+            print ("itr %3d of %3d" % (count, num_itr))
+            count = count + 1

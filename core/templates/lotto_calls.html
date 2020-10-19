@@ -15,19 +15,28 @@
       <col class="one-eight" />
       <col class="two-zero" />
       <col class="one-eight" />
+
       <!-- <col class="four" />
       <col class="seven" />
       <col class="seven" /> -->
+
+      <col class="three" />
       <col class="five" />
-      <col class="eight" />
+
       <col class="five" />
       <col class="five" />
+
+      <col class="three" />
       <col class="five" />
       <col class="five" />
-      <col class="five" />
+
       <!-- <col class="five" />
+        <col class="five" />
+        <col class="five" /> -->
+
       <col class="five" />
-      <col class="five" /> -->
+      <col class="five" />
+
       <col class="six" />
     </colgroup>
     <tbody>
@@ -47,8 +56,11 @@
         <th style="text-align:center"> max_dte </th>
 
         <th style="text-align:center"> iv </th>
-        <th style="text-align:center"> min </th>
-        <th style="text-align:center"> max </th>
+        <th style="text-align:center"> min % </th>
+        <th style="text-align:center"> max % </th>
+
+        <th style="text-align:center"> max_otm % </th>
+        <th style="text-align:center"> max_cost </th>
 
         <!-- <th style="text-align:center"> delta </th>
         <th style="text-align:center"> min </th>
@@ -78,6 +90,9 @@
         <td style="text-align:center"> <input id="min_delta"          type="text" name="min_delta"          value="{{ min_delta }}"> </th>
         <td style="text-align:center"> <input id="max_delta"          type="text" name="max_delta"          value="{{ max_delta }}"> </th> -->
 
+        <td style="text-align:center"> <input id="max_otm"            type="text" name="max_otm"            value="{{ max_otm }}"> </th>
+        <td style="text-align:center"> <input id="max_premium"        type="text" name="max_premium"        value="{{ max_premium }}"> </th>
+
         <td style="text-align:center"> <input type="submit" value="submit" name='submit'> </th>
       </tr>
     </tbody>
@@ -95,8 +110,12 @@
                     <th> description </th>
                     <th> premium </th>
                     <th> current </th>
+                    <th> prev_er_surprise  %</th>
+                    <th> prev_er_jump %</th>
                     <th> delta </th>
                     <th> iv </th>
+                    <th> prevER </th>
+                    <th> nextER </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -105,8 +124,12 @@
                     <td> {{ row.description }} </td>
                     <td> {{ row.premium | floatformat:2 }} </td>
                     <td> {{ row.curr_price | floatformat:2 }} </td>
+                    <td> {{ row.prev_er_surprise | floatformat:2 }} </td>
+                    <td> {{ row.prev_er_jump | floatformat:2 }} </td>
                     <td> {{ row.delta }} </td>
                     <td> {{ row.iv }} </td>
+                    <td> {{ row.mostRecentER }} </td>
+                    <td> {{ row.nextER }} </td>
                   </tr>
                   {% endfor %}
                 </tbody>

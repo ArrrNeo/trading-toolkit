@@ -14,6 +14,7 @@ class screener(models.Model):
     epsSurprisePC = models.FloatField(default=0, null=True)
     options = models.BooleanField(default=False)
     mostRecentER = models.DateTimeField(null=True)
+    nextER = models.DateTimeField(null=True)
     sector = models.CharField(max_length=100, default='')
     industry = models.CharField(max_length=100, default='')
     marketCap = models.IntegerField(default=0) # in 1000
